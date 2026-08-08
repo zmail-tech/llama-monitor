@@ -1,6 +1,8 @@
 services:
   collector:
-    build: ./collector
+    image: ghcr.io/zmail-tech/llama-monitor:latest
+    # For local development, comment out `image` and uncomment `build`:
+    # build: ./collector
     container_name: llama-collector
     env_file: .env
     environment:
@@ -11,7 +13,8 @@ services:
       - "7788:7788"
     volumes:
       - collector-data:/data
-      - ./frontend:/app/frontend:ro
+      # Mount local frontend for dev overrides (optional):
+      # - ./frontend:/app/frontend:ro
     restart: unless-stopped
     networks:
       - monitor
