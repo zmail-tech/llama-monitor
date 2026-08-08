@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Llama.cpp Monitor</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<header>
+  <div class="header-left">
+    <h1>llama.cpp <span class="accent">monitor</span></h1>
+    <div id="status-badge" class="badge badge-live">● collecting</div>
+  </div>
+  <div class="header-right">
+    <div class="time-range-picker">
+      <button class="range-btn" data-range="1h">1h</button>
+      <button class="range-btn" data-range="6h">6h</button>
+      <button class="range-btn active" data-range="24h">24h</button>
+      <button class="range-btn" data-range="7d">7d</button>
+      <button class="range-btn" data-range="30d">30d</button>
+      <button class="range-btn" data-range="all">All</button>
+    </div>
+    <div id="last-update" class="meta-text">—</div>
+  </div>
+</header>
+
+<main>
+  <!-- Current State -->
+  <section class="card" id="current-state">
+    <h2 class="card-title">Current State</h2>
+    <div id="instance-grid" class="instance-grid">
+      <!-- Populated by JS -->
+    </div>
+  </section>
+
+  <!-- Totals Row -->
+  <section class="stats-row" id="totals-row">
+    <div class="stat-card">
+      <div class="stat-label">Total Prompt Tokens</div>
+      <div class="stat-value accent-green" id="total-prompt">—</div>
+      <div class="stat-sub" id="total-prompt-sub">all time</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Total Generated Tokens</div>
+      <div class="stat-value accent-blue" id="total-predicted">—</div>
+      <div class="stat-sub" id="total-predicted-sub">all time</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Total Tokens</div>
+      <div class="stat-value accent-yellow" id="total-all">—</div>
+      <div class="stat-sub">prompt + generated</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Avg Throughput</div>
+      <div class="stat-value accent-aqua" id="avg-throughput">—</div>
+      <div class="stat-sub">tokens/sec (generated)</div>
+    </div>
+  </section>
+
+  <!-- Charts -->
+  <section class="charts-row">
+    <div class="card chart-card">
+      <h2 class="card-title">Tokens Over Time</h2>
+      <canvas id="tokens-chart"></canvas>
+    </div>
+    <div class="card chart-card">
+      <h2 class="card-title">Throughput (tokens/sec)</h2>
+      <canvas id="throughput-chart"></canvas>
+    </div>
+  </section>
+
+  <!-- Per-Model Breakdown -->
+  <section class="card">
+    <h2 class="card-title">Usage by Model</h2>
+    <div class="model-table-wrap">
+      <table class="model-table" id="model-table">
+        <thead>
+          <tr>
+            <th>Instance</th>
+            <th>Model</th>
+            <th class="num">Prompt Tokens</th>
+            <th class="num">Generated Tokens</th>
+            <th class="num">Total</th>
+            <th class="num">Avg Prompt t/s</th>
+            <th class="num">Avg Gen t/s</th>
+            <th class="num">Prompt Time</th>
+            <th class="num">Gen Time</th>
+            <th class="num">Decodes</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="model-tbody">
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- Model Distribution Bar Chart -->
+  <section class="card">
+    <h2 class="card-title">Token Distribution by Model</h2>
+    <div id="dist-bars" class="dist-bars"></div>
+  </section>
+</main>
+
+<footer>
+  <span>Data from <span id="instance-count">0</span> instances · SQLite backend · refreshes every ~15s</span>
+</footer>
+
+<!-- Chart.js CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<script src="/app.js"></script>
+</body>
+</html>

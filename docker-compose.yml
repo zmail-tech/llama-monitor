@@ -1,0 +1,25 @@
+services:
+  collector:
+    build: ./collector
+    container_name: llama-collector
+    env_file: .env
+    environment:
+      - COLLECTOR_PORT=7788
+      - SCRAPE_INTERVAL=15
+      - DB_PATH=/data/metrics.db
+    ports:
+      - "7788:7788"
+    volumes:
+      - collector-data:/data
+      - ./frontend:/app/frontend:ro
+    restart: unless-stopped
+    networks:
+      - monitor
+
+volumes:
+  collector-data:
+    external: true
+
+networks:
+  monitor:
+    driver: bridge

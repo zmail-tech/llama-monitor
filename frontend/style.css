@@ -1,0 +1,443 @@
+/* ═══════════════════════════════════════════════════════════
+   Gruvbox Dark Theme — Llama.cpp Monitor Dashboard
+   https://github.com/morhetz/gruvbox
+   ═══════════════════════════════════════════════════════════ */
+
+:root {
+  /* Backgrounds */
+  --bg0:       #1d2021;
+  --bg0-h:     #282828;
+  --bg1:       #3c3836;
+  --bg2:       #504945;
+  --bg3:       #665c54;
+  --bg4:       #7c6f64;
+
+  /* Foregrounds */
+  --fg0:       #ebdbb2;
+  --fg1:       #d5c4a1;
+  --fg2:       #bdae93;
+  --fg3:       #a89984;
+  --fg4:       #928374;
+
+  /* Neutrals */
+  --gray:      #7c6f64;
+
+  /* Accent colors */
+  --red:       #cc241d;
+  --green:     #98971a;
+  --yellow:    #d79921;
+  --blue:      #458588;
+  --purple:    #b16286;
+  --aqua:      #689d6a;
+  --orange:    #d65d0e;
+  --green-b:   #b8bb26;
+  --yellow-b:  #fabd2f;
+  --blue-b:    #83a598;
+  --purple-b:  #d3869b;
+  --aqua-b:    #8ec07c;
+  --orange-b:  #fe8019;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'JetBrains Mono', 'Fira Code', 'SF Mono', 'Cascadia Code',
+               'Consolas', 'Liberation Mono', monospace;
+  background: var(--bg0);
+  color: var(--fg1);
+  line-height: 1.5;
+  font-size: 14px;
+  min-height: 100vh;
+}
+
+/* ── Header ─────────────────────────────────────────────── */
+
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 24px;
+  background: var(--bg0-h);
+  border-bottom: 2px solid var(--bg2);
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+header h1 {
+  font-size: 1.4rem;
+  color: var(--fg0);
+  font-weight: 700;
+  letter-spacing: -0.5px;
+}
+
+header h1 .accent {
+  color: var(--green-b);
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+/* ── Badges ─────────────────────────────────────────────── */
+
+.badge {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.badge-live {
+  background: var(--green);
+  color: var(--bg0);
+}
+
+.badge-offline {
+  background: var(--red);
+  color: var(--bg0);
+}
+
+.badge-loading {
+  background: var(--yellow);
+  color: var(--bg0);
+}
+
+/* ── Time Range Picker ──────────────────────────────────── */
+
+.time-range-picker {
+  display: flex;
+  gap: 2px;
+  background: var(--bg1);
+  border-radius: 6px;
+  padding: 2px;
+}
+
+.range-btn {
+  background: transparent;
+  border: none;
+  color: var(--fg3);
+  padding: 4px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+  transition: all 0.15s;
+}
+
+.range-btn:hover {
+  color: var(--fg0);
+  background: var(--bg2);
+}
+
+.range-btn.active {
+  background: var(--blue);
+  color: var(--bg0);
+}
+
+.meta-text {
+  color: var(--fg4);
+  font-size: 0.75rem;
+}
+
+/* ── Main Layout ────────────────────────────────────────── */
+
+main {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* ── Cards ──────────────────────────────────────────────── */
+
+.card {
+  background: var(--bg0-h);
+  border: 1px solid var(--bg2);
+  border-radius: 8px;
+  padding: 20px;
+}
+
+.card-title {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--fg2);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  margin-bottom: 16px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--bg1);
+}
+
+/* ── Stats Row ──────────────────────────────────────────── */
+
+.stats-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+.stat-card {
+  background: var(--bg0-h);
+  border: 1px solid var(--bg2);
+  border-radius: 8px;
+  padding: 20px;
+  text-align: center;
+}
+
+.stat-label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--fg4);
+  margin-bottom: 8px;
+}
+
+.stat-value {
+  font-size: 2rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.stat-sub {
+  font-size: 0.7rem;
+  color: var(--fg4);
+  margin-top: 4px;
+}
+
+.accent-green { color: var(--green-b); }
+.accent-blue { color: var(--blue-b); }
+.accent-yellow { color: var(--yellow-b); }
+.accent-aqua { color: var(--aqua-b); }
+.accent-orange { color: var(--orange-b); }
+.accent-red { color: var(--red); }
+.accent-purple { color: var(--purple-b); }
+
+/* ── Current State / Instance Grid ──────────────────────── */
+
+.instance-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 12px;
+}
+
+.instance-card {
+  background: var(--bg1);
+  border-radius: 6px;
+  padding: 14px 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.instance-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.instance-name {
+  font-weight: 700;
+  color: var(--fg0);
+  font-size: 0.95rem;
+}
+
+.instance-model {
+  color: var(--fg3);
+  font-size: 0.8rem;
+}
+
+.instance-status {
+  font-size: 0.7rem;
+  padding: 2px 8px;
+  border-radius: 3px;
+  font-weight: 600;
+}
+
+.status-loaded {
+  background: var(--green);
+  color: var(--bg0);
+}
+
+.status-loading {
+  background: var(--yellow);
+  color: var(--bg0);
+}
+
+.status-unloaded {
+  background: var(--bg3);
+  color: var(--fg3);
+}
+
+/* ── Charts ─────────────────────────────────────────────── */
+
+.charts-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.chart-card {
+  min-height: 300px;
+}
+
+.chart-card canvas {
+  width: 100% !important;
+  max-height: 260px;
+}
+
+/* ── Model Table ────────────────────────────────────────── */
+
+.model-table-wrap {
+  overflow-x: auto;
+}
+
+.model-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+}
+
+.model-table thead th {
+  text-align: left;
+  padding: 8px 12px;
+  color: var(--fg3);
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.72rem;
+  letter-spacing: 0.6px;
+  border-bottom: 2px solid var(--bg2);
+  white-space: nowrap;
+}
+
+.model-table thead th.num {
+  text-align: right;
+}
+
+.model-table tbody td {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--bg1);
+  color: var(--fg1);
+}
+
+.model-table tbody td.num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.model-table tbody tr:hover {
+  background: var(--bg1);
+}
+
+.model-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.model-name-cell {
+  color: var(--aqua-b);
+  font-weight: 600;
+}
+
+.instance-cell {
+  color: var(--fg3);
+}
+
+/* ── Distribution Bars ──────────────────────────────────── */
+
+.dist-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.dist-row {
+  display: grid;
+  grid-template-columns: 200px 1fr 90px;
+  align-items: center;
+  gap: 12px;
+}
+
+.dist-label {
+  font-size: 0.82rem;
+  color: var(--fg2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dist-bar-bg {
+  background: var(--bg1);
+  border-radius: 4px;
+  height: 22px;
+  overflow: hidden;
+  position: relative;
+}
+
+.dist-bar-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.4s ease;
+  min-width: 2px;
+}
+
+.dist-value {
+  font-size: 0.8rem;
+  color: var(--fg3);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Footer ─────────────────────────────────────────────── */
+
+footer {
+  text-align: center;
+  padding: 16px;
+  color: var(--fg4);
+  font-size: 0.72rem;
+  border-top: 1px solid var(--bg1);
+  margin-top: 12px;
+}
+
+/* ── Responsive ─────────────────────────────────────────── */
+
+@media (max-width: 900px) {
+  .charts-row {
+    grid-template-columns: 1fr;
+  }
+  .dist-row {
+    grid-template-columns: 140px 1fr 70px;
+  }
+}
+
+@media (max-width: 600px) {
+  header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .stats-row {
+    grid-template-columns: 1fr 1fr;
+  }
+  .dist-row {
+    grid-template-columns: 100px 1fr;
+  }
+  .dist-value {
+    display: none;
+  }
+}
