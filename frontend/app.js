@@ -336,6 +336,151 @@ function initCharts() {
   });
 }
 
+// ── Cost Comparison ────────────────────────────────────────────────
+
+let openrouterModels = [];
+let costSearchDebounce = null;
+let selectedCostModel = null;
+
+async function loadOpenRouterModels(query = "") {
+  try {
+    const url = query
+      ? `/api/openrouter-models?q=${encodeURIComponent(query)}`
+      : "/api/openrouter-models";
+    const data = await api(url);
+    if (data) {
+      openrouterModels = data.models || [];
+      renderCostDropdown(openrouterModels);
+    }
+  } catch (e) {
+    console.error("Failed to load OpenRouter models:", e);
+  }
+}
+
+function renderCostDropdown(models) {
+  const dropdown = document.getElementById("cost-dropdown");
+  if (!dropdown) return;
+
+  if (!models.length) {
+    dropdown.innerHTML = '<div class="cost-dropdown-empty">No models found</div>';
+    dropdown.classList.add("open");
+    return;
+  }
+
+  // Show max 50 results to avoid DOM bloat
+  const shown = models.slice(0, 50);
+  dropdown.innerHTML = shown.map(m => {
+    const pricing = [];
+    if (m.prompt_price != null) pricing.push(`p: $<span>${m.prompt_price}</span>`);
+    if (m.completion_price != null) pricing.push(`c: $<span>${m.completion_price}</span>`);
+    const priceStr = pricing.length ? pricing.join(" · ") : "no pricing";
+    return `<div class="cost-dropdown-item" data-id="${m.id}">
+      <span class="model-name" title="${m.id}">${m.name || m.id}</span>
+      <span class="model-pricing">${priceStr}</span>
+    </div>`;
+  }).join("");
+
+  if (models.length > 50) {
+    dropdown.innerHTML += `<div class="cost-dropdown-empty">…and ${models.length - 50} more (type to narrow)</div>`;
+  }
+
+  // Click handlers
+  dropdown.querySelectorAll(".cost-dropdown-item").forEach(item => {
+    item.addEventListener("click", () => {
+      const id = item.dataset.id;
+      selectedCostModel = id;
+      document.getElementById("cost-search").value = id;
+      dropdown.classList.remove("open");
+      calculateCost(id);
+    });
+  });
+
+  dropdown.classList.add("open");
+}
+
+async function calculateCost(modelId) {
+  const resultEl = document.getElementById("cost-result");
+  if (!resultEl) return;
+
+  resultEl.innerHTML = '<div class="cost-placeholder">Calculating…</div>';
+
+  try {
+    const data = await api(`/api/cost-calc?model=${encodeURIComponent(modelId)}&range=${currentRange}`);
+    if (!data || data.error) {
+      resultEl.innerHTML = `<div class="cost-placeholder">${data?.error || "Error calculating cost"}</div>`;
+      return;
+    }
+
+    const rangeLabel = currentRange === "all" ? "all time" : `last ${currentRange}`;
+    resultEl.innerHTML = `
+      <div class="cost-result-card">
+        <div class="cost-result-header">
+          <span class="cost-result-model">${data.model_name}</span>
+          <span class="cost-result-range">${rangeLabel}</span>
+        </div>
+        <div class="cost-result-body">
+          <div class="cost-stat">
+            <div class="cost-stat-label">Prompt Tokens</div>
+            <div class="cost-stat-value accent-green">${fmt(data.prompt_tokens)}</div>
+          </div>
+          <div class="cost-stat">
+            <div class="cost-stat-label">Completion Tokens</div>
+            <div class="cost-stat-value accent-blue">${fmt(data.completion_tokens)}</div>
+          </div>
+          <div class="cost-stat">
+            <div class="cost-stat-label">Total Tokens</div>
+            <div class="cost-stat-value accent-yellow">${fmt(data.total_tokens)}</div>
+          </div>
+        </div>
+        <div class="cost-result-footer">
+          <div class="cost-total-label">Estimated Cost</div>
+          <div class="cost-total-value">${data.cost_formatted}</div>
+        </div>
+      </div>
+    `;
+  } catch (e) {
+    resultEl.innerHTML = '<div class="cost-placeholder">Failed to calculate cost</div>';
+    console.error("Cost calculation error:", e);
+  }
+}
+
+// Initialize cost comparison search
+function initCostComparison() {
+  const input = document.getElementById("cost-search");
+  const dropdown = document.getElementById("cost-dropdown");
+  if (!input || !dropdown) return;
+
+  // Load models on focus or input
+  input.addEventListener("focus", () => {
+    if (!input.value) {
+      loadOpenRouterModels();
+    }
+  });
+
+  input.addEventListener("input", () => {
+    clearTimeout(costSearchDebounce);
+    costSearchDebounce = setTimeout(() => {
+      loadOpenRouterModels(input.value);
+    }, 250);
+  });
+
+  // Close dropdown on outside click
+  document.addEventListener("click", (e) => {
+    if (!e.target.closest(".cost-input-row")) {
+      dropdown.classList.remove("open");
+    }
+  });
+
+  // Recalculate when time range changes
+  const origRefresh = window.refresh;
+  window.refresh = async function () {
+    await origRefresh();
+    if (selectedCostModel) {
+      calculateCost(selectedCostModel);
+    }
+  };
+}
+
 // ── Main ───────────────────────────────────────────────────
 
 async function refresh() {
@@ -366,6 +511,7 @@ document.querySelectorAll(".range-btn").forEach(btn => {
 
 // Init
 initCharts();
+initCostComparison();
 refresh();
 
 // Auto-refresh every 15s

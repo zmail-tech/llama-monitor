@@ -24,6 +24,60 @@ SCRAPE_INTERVAL = int(os.environ.get("SCRAPE_INTERVAL", "15"))
 DB_PATH = os.environ.get("DB_PATH", "/data/metrics.db")
 LISTEN_PORT = int(os.environ.get("COLLECTOR_PORT", "7788"))
 FRONTEND_DIR = "/app/frontend"
+OPENROUTER_KEY = os.environ.get("OPENROUTER_API_KEY", "").strip().strip('"').strip("'")
+
+# ── OpenRouter model cache ────────────────────────────────────────────
+_openrouter_cache = None
+_openrouter_cache_time = 0
+_OPENROUTER_CACHE_TTL = 3600  # 1 hour
+
+
+def _fetch_openrouter_models() -> list:
+    """Fetch models from OpenRouter, returning [{id, name, pricing: {prompt, completion}}]."""
+    global _openrouter_cache, _openrouter_cache_time
+    now = time.time()
+    if _openrouter_cache is not None and (now - _openrouter_cache_time) < _OPENROUTER_CACHE_TTL:
+        return _openrouter_cache
+
+    if not OPENROUTER_KEY:
+        return []
+
+    try:
+        req = urllib.request.Request(
+            "https://openrouter.ai/api/v1/models",
+            headers={"Authorization": OPENROUTER_KEY},
+        )
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            data = json.loads(resp.read().decode())
+    except Exception as e:
+        print(f"[collector] OpenRouter models fetch failed: {e}")
+        return []
+
+    models = []
+    for m in data.get("data", []):
+        pricing = m.get("pricing", {})
+        prompt_price = completion_price = None
+        try:
+            pp = pricing.get("prompt")
+            if pp is not None:
+                prompt_price = f"{float(pp):.10f}".rstrip("0").rstrip(".")
+            cp = pricing.get("completion")
+            if cp is not None:
+                completion_price = f"{float(cp):.10f}".rstrip("0").rstrip(".")
+        except (ValueError, TypeError):
+            pass
+        models.append({
+            "id": m.get("id", ""),
+            "name": (m.get("name") or m.get("id", "")),
+            "prompt_price": prompt_price,
+            "completion_price": completion_price,
+        })
+
+    # Sort by name for predictable dropdown order
+    models.sort(key=lambda m: m["name"].lower())
+    _openrouter_cache = models
+    _openrouter_cache_time = now
+    return models
 
 INSTANCES = []
 for i in (1, 2, 3, 4):
@@ -242,6 +296,12 @@ class APIHandler(BaseHTTPRequestHandler):
             if path == "/api/instances":
                 self._json_response(api_instances(self.server.conn))
                 return
+            if path.startswith("/api/openrouter-models"):
+                self._json_response(api_openrouter_models(self.path))
+                return
+            if path.startswith("/api/cost-calc"):
+                self._json_response(api_cost_calc(self.server.conn, self.path))
+                return
 
         self.send_response(404)
         self.end_headers()
@@ -396,6 +456,109 @@ def api_instances(conn: sqlite3.Connection) -> dict:
         SELECT DISTINCT instance FROM snapshots ORDER BY instance
     """)
     return {"instances": [r[0] for r in cur.fetchall()]}
+
+
+def api_openrouter_models(path: str) -> dict:
+    """List OpenRouter models, optionally filtered by search query."""
+    from urllib.parse import urlparse, parse_qs
+    qs = parse_qs(urlparse(path).query)
+    search = qs.get("q", [""])[0].strip().lower()
+
+    models = _fetch_openrouter_models()
+    if search:
+        models = [m for m in models if search in m["id"].lower() or search in m["name"].lower()]
+
+    return {
+        "models": models,
+        "total": len(models),
+    }
+
+
+def api_cost_calc(conn: sqlite3.Connection, path: str) -> dict:
+    """Calculate cost for a given OpenRouter model based on total token usage."""
+    from urllib.parse import urlparse, parse_qs
+    qs = parse_qs(urlparse(path).query)
+    model_id = qs.get("model", [""])[0]
+    range_key = qs.get("range", ["24h"])[0]
+
+    if not model_id:
+        return {"error": "model parameter required"}
+
+    # Find pricing for this model
+    models = _fetch_openrouter_models()
+    target = next((m for m in models if m["id"] == model_id), None)
+    if not target:
+        return {"error": "model not found on OpenRouter"}
+
+    prompt_price = target.get("prompt_price")
+    completion_price = target.get("completion_price")
+    if prompt_price is not None:
+        prompt_price = float(prompt_price)
+    if completion_price is not None:
+        completion_price = float(completion_price)
+    if prompt_price is None and completion_price is None:
+        return {"error": "no pricing data for this model"}
+
+    # Get token totals for the requested range
+    now = time.time()
+    ranges = {
+        "1h": 3600, "6h": 21600, "24h": 86400,
+        "7d": 604800, "30d": 2592000, "all": 0,
+    }
+    seconds_back = ranges.get(range_key, 86400)
+    since = now - seconds_back if seconds_back else 0
+
+    # Get earliest and latest snapshots in range to compute deltas
+    cur = conn.execute("""
+        SELECT MIN(ts_epoch) as first_ts, MAX(ts_epoch) as last_ts
+        FROM snapshots WHERE ts_epoch >= ?
+    """, (since,))
+    row = cur.fetchone()
+    if not row or row[0] is None:
+        return {"error": "no data in range"}
+
+    first_ts, last_ts = row
+
+    # Get totals at first and last snapshot
+    def get_totals_at(ts):
+        c = conn.execute("""
+            SELECT COALESCE(SUM(prompt_tokens_total), 0),
+                   COALESCE(SUM(predicted_tokens_total), 0)
+            FROM snapshots s
+            WHERE s.ts_epoch = (
+                SELECT MAX(s2.ts_epoch) FROM snapshots s2
+                WHERE s2.ts_epoch <= ?
+                  AND s2.instance = s.instance
+                  AND s2.model = s.model
+            )
+        """, (ts,))
+        r = c.fetchone()
+        return r[0], r[1]
+
+    first_prompt, first_pred = get_totals_at(first_ts)
+    last_prompt, last_pred = get_totals_at(last_ts)
+
+    delta_prompt = max(0, last_prompt - first_prompt)
+    delta_pred = max(0, last_pred - first_pred)
+
+    cost = 0.0
+    if prompt_price is not None:
+        cost += delta_prompt * prompt_price
+    if completion_price is not None:
+        cost += delta_pred * completion_price
+
+    return {
+        "model_id": model_id,
+        "model_name": target["name"],
+        "prompt_price": f"${prompt_price:.10f}".rstrip("0").rstrip(".") if prompt_price is not None else None,
+        "completion_price": f"${completion_price:.10f}".rstrip("0").rstrip(".") if completion_price is not None else None,
+        "prompt_tokens": delta_prompt,
+        "completion_tokens": delta_pred,
+        "total_tokens": delta_prompt + delta_pred,
+        "cost_usd": round(cost, 4),
+        "cost_formatted": "${:.4f}".format(cost),
+        "range": range_key,
+    }
 
 
 # ── Main ─────────────────────────────────────────────────────────────
