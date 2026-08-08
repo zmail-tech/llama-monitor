@@ -1,0 +1,171 @@
+/* ═══════════════════════════════════════════════════════════
+   DOOM Theme — Based on the original DOOM (1993) color palette
+   Dark grays, blood reds, toxic greens, and hellish oranges
+   ═══════════════════════════════════════════════════════════ */
+
+:root {
+  /* Backgrounds — dark stone / hell interior */
+  --bg0:       #1a1a1a;
+  --bg0-h:     #2b2b2b;
+  --bg1:       #3d3d3d;
+  --bg2:       #555555;
+  --bg3:       #6b6b6b;
+  --bg4:       #808080;
+
+  /* Foregrounds */
+  --fg0:       #c8c8c8;
+  --fg1:       #b0b0b0;
+  --fg2:       #999999;
+  --fg3:       #888888;
+  --fg4:       #707070;
+
+  /* Neutrals */
+  --gray:      #707070;
+
+  /* Accent colors — DOOM palette */
+  --red:       #b91e1e;
+  --green:     #3d8b37;
+  --yellow:    #c8a415;
+  --blue:      #3b5dc9;
+  --purple:    #7b2d8b;
+  --aqua:      #3d8b6b;
+  --orange:    #c85a15;
+  --green-b:   #5cb85c;
+  --yellow-b:  #e8c840;
+  --blue-b:    #5c8bd4;
+  --purple-b:  #9b4db8;
+  --aqua-b:    #5cb89b;
+  --orange-b:  #e87030;
+}
+
+/* DOOM-style header with red border */
+header {
+  background: #2b2b2b;
+  border-bottom: 3px solid #b91e1e;
+}
+
+header h1 {
+  color: #c8c8c8;
+  letter-spacing: 1px;
+}
+
+header h1 .accent {
+  color: #b91e1e;
+  text-shadow: 0 0 8px rgba(185, 30, 30, 0.4);
+}
+
+/* DOOM HUD-style cards */
+.card,
+.stat-card {
+  background: #2b2b2b;
+  border: 1px solid #555555;
+  border-radius: 2px;
+}
+
+.card-title {
+  color: #c8a415;
+  border-bottom-color: #3d3d3d;
+  letter-spacing: 1.5px;
+}
+
+/* DOOM-style stat values */
+.stat-value {
+  font-weight: 900;
+}
+
+.stat-value.accent-green { color: #5cb85c; }
+.stat-value.accent-blue { color: #5c8bd4; }
+.stat-value.accent-yellow { color: #e8c840; }
+.stat-value.accent-aqua { color: #5cb89b; }
+
+/* DOOM instance cards */
+.instance-card {
+  background: #3d3d3d;
+  border: 1px solid #555555;
+  border-radius: 2px;
+}
+
+/* DOOM HUD range buttons */
+.time-range-picker {
+  background: #3d3d3d;
+  border-radius: 2px;
+  border: 1px solid #555555;
+}
+
+.range-btn.active {
+  background: #b91e1e;
+  color: #ffffff;
+}
+
+.range-btn:hover {
+  background: #555555;
+}
+
+/* DOOM-style cost comparison */
+.cost-search-input {
+  background: #2b2b2b;
+  border-color: #555555;
+  border-radius: 2px;
+}
+
+.cost-search-input:focus {
+  border-color: #b91e1e;
+}
+
+.cost-dropdown {
+  background: #2b2b2b;
+  border-color: #555555;
+  border-radius: 2px;
+}
+
+.cost-dropdown-item:hover {
+  background: #3d3d3d;
+}
+
+.cost-result-card {
+  background: #2b2b2b;
+  border-color: #555555;
+  border-radius: 2px;
+}
+
+.cost-total-value {
+  color: #b91e1e;
+  text-shadow: 0 0 10px rgba(185, 30, 30, 0.3);
+}
+
+/* DOOM table */
+.model-table thead th {
+  color: #c8a415;
+  border-bottom-color: #555555;
+}
+
+.model-name-cell {
+  color: #5cb89b;
+}
+
+/* DOOM badges */
+.badge-live {
+  background: #3d8b37;
+  color: #ffffff;
+}
+
+.badge-offline {
+  background: #b91e1e;
+  color: #ffffff;
+}
+
+/* DOOM footer */
+footer {
+  color: #707070;
+  border-top-color: #3d3d3d;
+}
+
+/* DOOM scrollbar */
+.cost-dropdown::-webkit-scrollbar-thumb {
+  background: #b91e1e;
+  border-radius: 2px;
+}
+
+.cost-dropdown::-webkit-scrollbar-track {
+  background: #2b2b2b;
+}

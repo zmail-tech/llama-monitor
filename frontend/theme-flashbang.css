@@ -1,0 +1,141 @@
+/* ═══════════════════════════════════════════════════════════
+   Flashbang Theme — Blinding white, stark black text
+   ═══════════════════════════════════════════════════════════ */
+
+:root {
+  /* Backgrounds */
+  --bg0:       #ffffff;
+  --bg0-h:     #f5f5f5;
+  --bg1:       #e8e8e8;
+  --bg2:       #d0d0d0;
+  --bg3:       #a0a0a0;
+  --bg4:       #808080;
+
+  /* Foregrounds */
+  --fg0:       #000000;
+  --fg1:       #1a1a1a;
+  --fg2:       #333333;
+  --fg3:       #555555;
+  --fg4:       #777777;
+
+  /* Neutrals */
+  --gray:      #888888;
+
+  /* Accent colors */
+  --red:       #cc0000;
+  --green:     #008000;
+  --yellow:    #b8860b;
+  --blue:      #0000cc;
+  --purple:    #660099;
+  --aqua:      #008080;
+  --orange:    #cc5500;
+  --green-b:   #008000;
+  --yellow-b:  #b8860b;
+  --blue-b:    #0000cc;
+  --purple-b:  #660099;
+  --aqua-b:    #008080;
+  --orange-b:  #cc5500;
+}
+
+/* Stark, no shadows */
+header {
+  background: #ffffff;
+  border-bottom: 2px solid #000000;
+  box-shadow: none;
+}
+
+header h1 {
+  color: #000000;
+}
+
+header h1 .accent {
+  color: #000000;
+  font-weight: 900;
+  text-shadow: none;
+}
+
+.card,
+.stat-card {
+  background: #ffffff;
+  border: 1px solid #d0d0d0;
+  box-shadow: none;
+}
+
+.card-title {
+  color: #000000;
+  border-bottom-color: #e8e8e8;
+}
+
+.stat-value {
+  text-shadow: none;
+}
+
+.stat-value.accent-green { color: #008000; }
+.stat-value.accent-blue { color: #0000cc; }
+.stat-value.accent-yellow { color: #b8860b; }
+.stat-value.accent-aqua { color: #008080; }
+
+.instance-card {
+  background: #f5f5f5;
+  border: 1px solid #d0d0d0;
+}
+
+.range-btn.active {
+  background: #000000;
+  color: #ffffff;
+}
+
+.cost-search-input {
+  background: #ffffff;
+  border-color: #d0d0d0;
+  color: #000000;
+}
+
+.cost-search-input:focus {
+  border-color: #000000;
+  box-shadow: none;
+}
+
+.cost-dropdown {
+  background: #ffffff;
+  border-color: #000000;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.cost-dropdown-item:hover {
+  background: #f5f5f5;
+}
+
+.cost-result-card {
+  background: #ffffff;
+  border-color: #000000;
+}
+
+.cost-total-value {
+  color: #cc0000;
+  text-shadow: none;
+}
+
+.model-table thead th {
+  color: #000000;
+  border-bottom-color: #000000;
+}
+
+.model-name-cell {
+  color: #008080;
+}
+
+.badge-live {
+  background: #008000;
+  color: #ffffff;
+}
+
+.badge-offline {
+  background: #cc0000;
+  color: #ffffff;
+}
+
+footer {
+  color: #777777;
+  border-top-color: #e8e8e8;
+}

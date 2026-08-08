@@ -508,7 +508,47 @@ document.querySelectorAll(".range-btn").forEach(btn => {
   });
 });
 
+// ── Theme Switching ────────────────────────────────────────────────────
+
+const THEMES = {
+  gruvbox: null,
+  synthwave: "theme-synthwave.css",
+  flashbang: "theme-flashbang.css",
+  doom: "theme-doom.css",
+};
+
+function setTheme(name) {
+  const linkId = "theme-stylesheet";
+  let link = document.getElementById(linkId);
+
+  // Remove existing theme
+  if (link) link.remove();
+
+  // Apply new theme (null = default gruvbox)
+  if (name !== "gruvbox" && THEMES[name]) {
+    link = document.createElement("link");
+    link.id = linkId;
+    link.rel = "stylesheet";
+    link.href = `/${THEMES[name]}`;
+    document.head.appendChild(link);
+  }
+
+  // Persist
+  localStorage.setItem("llama-monitor-theme", name);
+  document.getElementById("theme-select").value = name;
+}
+
+function initTheme() {
+  const saved = localStorage.getItem("llama-monitor-theme") || "gruvbox";
+  setTheme(saved);
+
+  document.getElementById("theme-select").addEventListener("change", (e) => {
+    setTheme(e.target.value);
+  });
+}
+
 // Init
+initTheme();
 initCharts();
 initCostComparison();
 refresh();

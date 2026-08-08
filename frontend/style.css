@@ -90,6 +90,35 @@ header h1 .accent {
   gap: 16px;
 }
 
+/* ── Theme Picker ───────────────────────────────────────── */
+
+.theme-picker select {
+  background: var(--bg1);
+  border: 1px solid var(--bg2);
+  border-radius: 4px;
+  color: var(--fg1);
+  padding: 4px 8px;
+  font-family: inherit;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.theme-picker select:hover {
+  border-color: var(--bg3);
+}
+
+.theme-picker select:focus {
+  border-color: var(--blue);
+}
+
+.theme-picker select option {
+  background: var(--bg0-h);
+  color: var(--fg1);
+}
+
 /* ── Badges ─────────────────────────────────────────────── */
 
 .badge {
@@ -422,10 +451,10 @@ main {
 .cost-search-input {
   width: 100%;
   padding: 0.75rem 1rem;
-  background: #282828;
-  border: 1px solid #504945;
+  background: var(--bg0-h);
+  border: 1px solid var(--bg2);
   border-radius: 6px;
-  color: #ebdbb2;
+  color: var(--fg0);
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.85rem;
   outline: none;
@@ -433,11 +462,11 @@ main {
 }
 
 .cost-search-input:focus {
-  border-color: #fabd2f;
+  border-color: var(--yellow-b);
 }
 
 .cost-search-input::placeholder {
-  color: #7c6f64;
+  color: var(--gray);
 }
 
 .cost-dropdown {
@@ -447,8 +476,8 @@ main {
   right: 0;
   max-height: 300px;
   overflow-y: auto;
-  background: #282828;
-  border: 1px solid #504945;
+  background: var(--bg0-h);
+  border: 1px solid var(--bg2);
   border-radius: 6px;
   margin-top: 4px;
   z-index: 100;
@@ -466,7 +495,7 @@ main {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-bottom: 1px solid #3c3836;
+  border-bottom: 1px solid var(--bg1);
   transition: background 0.15s;
 }
 
@@ -475,11 +504,11 @@ main {
 }
 
 .cost-dropdown-item:hover {
-  background: #3c3836;
+  background: var(--bg1);
 }
 
 .cost-dropdown-item .model-name {
-  color: #ebdbb2;
+  color: var(--fg0);
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.8rem;
   flex: 1;
@@ -490,7 +519,7 @@ main {
 }
 
 .cost-dropdown-item .model-pricing {
-  color: #928374;
+  color: var(--fg4);
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.7rem;
   white-space: nowrap;
@@ -498,13 +527,13 @@ main {
 }
 
 .cost-dropdown-item .model-pricing span {
-  color: #fabd2f;
+  color: var(--yellow-b);
 }
 
 .cost-dropdown-empty {
   padding: 1rem;
   text-align: center;
-  color: #7c6f64;
+  color: var(--gray);
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.8rem;
 }
@@ -515,15 +544,15 @@ main {
 }
 
 .cost-placeholder {
-  color: #7c6f64;
+  color: var(--gray);
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.85rem;
   font-style: italic;
 }
 
 .cost-result-card {
-  background: #282828;
-  border: 1px solid #504945;
+  background: var(--bg0-h);
+  border: 1px solid var(--bg2);
   border-radius: 6px;
   padding: 1.25rem;
 }
@@ -534,18 +563,18 @@ main {
   align-items: center;
   margin-bottom: 1rem;
   padding-bottom: 0.75rem;
-  border-bottom: 1px solid #3c3836;
+  border-bottom: 1px solid var(--bg1);
 }
 
 .cost-result-model {
-  color: #ebdbb2;
+  color: var(--fg0);
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.9rem;
   font-weight: bold;
 }
 
 .cost-result-range {
-  color: #928374;
+  color: var(--fg4);
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.75rem;
 }
@@ -561,7 +590,7 @@ main {
 }
 
 .cost-stat-label {
-  color: #928374;
+  color: var(--fg4);
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.7rem;
   text-transform: uppercase;
@@ -569,40 +598,40 @@ main {
 }
 
 .cost-stat-value {
-  color: #ebdbb2;
+  color: var(--fg0);
   font-family: 'JetBrains Mono', monospace;
   font-size: 1rem;
   font-weight: bold;
 }
 
 .cost-stat-value.accent-green {
-  color: #b8bb26;
+  color: var(--green-b);
 }
 
 .cost-stat-value.accent-yellow {
-  color: #fabd2f;
+  color: var(--yellow-b);
 }
 
 .cost-stat-value.accent-red {
-  color: #fb4934;
+  color: var(--red);
 }
 
 .cost-result-footer {
   margin-top: 1rem;
   padding-top: 0.75rem;
-  border-top: 1px solid #3c3836;
+  border-top: 1px solid var(--bg1);
   text-align: center;
 }
 
 .cost-total-label {
-  color: #928374;
+  color: var(--fg4);
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.7rem;
   text-transform: uppercase;
 }
 
 .cost-total-value {
-  color: #fb4934;
+  color: var(--red);
   font-family: 'JetBrains Mono', monospace;
   font-size: 1.5rem;
   font-weight: bold;

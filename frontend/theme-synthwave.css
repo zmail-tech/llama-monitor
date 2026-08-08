@@ -1,0 +1,107 @@
+/* ═══════════════════════════════════════════════════════════
+   Synthwave Theme — Vaporwave / Retro 80s neon
+   ═══════════════════════════════════════════════════════════ */
+
+:root {
+  /* Backgrounds — deep purple-black gradient feel */
+  --bg0:       #1a0a2e;
+  --bg0-h:     #2d1b69;
+  --bg1:       #44318d;
+  --bg2:       #5e4b9e;
+  --bg3:       #7b68ae;
+  --bg4:       #9b89b4;
+
+  /* Foregrounds */
+  --fg0:       #f8e8ff;
+  --fg1:       #e8d0f0;
+  --fg2:       #d8b8e8;
+  --fg3:       #c0a0d8;
+  --fg4:       #9080b8;
+
+  /* Neutrals */
+  --gray:      #9080b8;
+
+  /* Accent colors — neon palette */
+  --red:       #ff6b9d;
+  --green:     #39ff14;
+  --yellow:    #ffd700;
+  --blue:      #00d4ff;
+  --purple:    #bf4dff;
+  --aqua:      #00ffcc;
+  --orange:    #ff6b35;
+  --green-b:   #39ff14;
+  --yellow-b:  #ffd700;
+  --blue-b:    #00d4ff;
+  --purple-b:  #bf4dff;
+  --aqua-b:    #00ffcc;
+  --orange-b:  #ff6b35;
+}
+
+/* Neon glow on header */
+header {
+  border-bottom-color: var(--purple);
+  box-shadow: 0 0 20px rgba(191, 77, 255, 0.3);
+}
+
+header h1 .accent {
+  color: var(--aqua-b);
+  text-shadow: 0 0 10px rgba(0, 255, 204, 0.5);
+}
+
+/* Neon card borders */
+.card,
+.stat-card {
+  border-color: var(--bg2);
+  box-shadow: 0 0 15px rgba(191, 77, 255, 0.1);
+}
+
+.card-title {
+  color: var(--aqua-b);
+  text-shadow: 0 0 8px rgba(0, 255, 204, 0.3);
+}
+
+/* Neon stat values */
+.stat-value {
+  text-shadow: 0 0 12px currentColor;
+}
+
+/* Neon instance cards */
+.instance-card {
+  border: 1px solid var(--bg2);
+}
+
+/* Neon range buttons */
+.range-btn.active {
+  background: var(--purple);
+  box-shadow: 0 0 10px rgba(191, 77, 255, 0.5);
+}
+
+/* Neon cost comparison */
+.cost-search-input:focus {
+  border-color: var(--aqua-b);
+  box-shadow: 0 0 10px rgba(0, 255, 204, 0.3);
+}
+
+.cost-total-value {
+  text-shadow: 0 0 15px rgba(255, 107, 157, 0.5);
+}
+
+/* Neon table headers */
+.model-table thead th {
+  color: var(--aqua-b);
+  border-bottom-color: var(--purple);
+}
+
+.model-name-cell {
+  color: var(--orange-b);
+}
+
+/* Neon scrollbar */
+.cost-dropdown::-webkit-scrollbar-thumb {
+  background: var(--purple);
+  border-radius: 4px;
+}
+
+.cost-dropdown::-webkit-scrollbar-track {
+  background: var(--bg0-h);
+}
