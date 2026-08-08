@@ -369,14 +369,13 @@ function renderCostDropdown(models) {
 
   // Show max 50 results to avoid DOM bloat
   const shown = models.slice(0, 50);
+  const fmtPrice = (p) => p != null ? `$${(parseFloat(p) * 1000000).toFixed(2)}/M` : "—";
   dropdown.innerHTML = shown.map(m => {
-    const pricing = [];
-    if (m.prompt_price != null) pricing.push(`p: $<span>${m.prompt_price}</span>`);
-    if (m.completion_price != null) pricing.push(`c: $<span>${m.completion_price}</span>`);
-    const priceStr = pricing.length ? pricing.join(" · ") : "no pricing";
+    const pp = fmtPrice(m.prompt_price);
+    const cp = fmtPrice(m.completion_price);
     return `<div class="cost-dropdown-item" data-id="${m.id}">
       <span class="model-name" title="${m.id}">${m.name || m.id}</span>
-      <span class="model-pricing">${priceStr}</span>
+      <span class="model-pricing">in: <span>${pp}</span> · out: <span>${cp}</span></span>
     </div>`;
   }).join("");
 
