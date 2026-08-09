@@ -4,8 +4,6 @@
 
 // ── State ──────────────────────────────────────────────────
 let currentRange = "24h";
-let tokensChart = null;
-let throughputChart = null;
 let refreshTimer = null;
 let filterInstance = "";
 let filterModel = "";
@@ -419,145 +417,6 @@ async function renderEnergy() {
   });
 }
 
-// ── Charts ─────────────────────────────────────────────────
-
-function makeChartOptions() {
-  return {
-    responsive: true,
-    maintainAspectRatio: false,
-    animation: { duration: 300 },
-    plugins: {
-      legend: {
-        labels: {
-          color: "#a89984",
-          font: { family: "'JetBrains Mono', monospace", size: 11 },
-          boxWidth: 12,
-          padding: 12,
-        }
-      },
-      tooltip: {
-        backgroundColor: "#282828",
-        titleColor: "#ebdbb2",
-        bodyColor: "#d5c4a1",
-        borderColor: "#504945",
-        borderWidth: 1,
-        titleFont: { family: "'JetBrains Mono', monospace" },
-        bodyFont: { family: "'JetBrains Mono', monospace" },
-        padding: 10,
-        callbacks: {
-          title: function(items) {
-            if (!items.length) return "";
-            const d = new Date(items[0].parsed.x * 1000);
-            return d.toLocaleTimeString();
-          }
-        }
-      }
-    },
-    scales: {
-      x: {
-        type: "category",
-        grid: { color: "#3c3836" },
-        ticks: {
-          color: "#928374",
-          font: { size: 10, family: "'JetBrains Mono', monospace" },
-          maxRotation: 45,
-          autoSkip: true,
-          maxTicksLimit: 12,
-          callback: function(val, idx) {
-            const d = new Date(this.getLabelForValue(val) * 1000);
-            return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-          }
-        }
-      },
-      y: {
-        beginAtZero: true,
-        grid: { color: "#3c3836" },
-        ticks: {
-          color: "#928374",
-          font: { size: 10, family: "'JetBrains Mono', monospace" },
-          callback: v => fmt(v),
-        }
-      }
-    },
-    interaction: {
-      intersect: false,
-      mode: "index",
-    }
-  };
-}
-
-function buildDatasets(points, valueKey1, valueKey2, labelPrefix) {
-  const seriesMap = {};
-
-  points.forEach(p => {
-    const key = `${p.instance}/${p.model}`;
-    if (!seriesMap[key]) {
-      seriesMap[key] = { label: key, data: [], color: null };
-    }
-    seriesMap[key].data.push({ x: p.ts, y1: p.v1, y2: p.v2 });
-  });
-
-  Object.keys(seriesMap).forEach((k, i) => {
-    seriesMap[k].color = COLORS[i % COLORS.length];
-  });
-
-  return Object.values(seriesMap).map(s => ({
-    label: s.label,
-    borderColor: s.color,
-    backgroundColor: s.color + "22",
-    borderWidth: 2,
-    fill: false,
-    tension: 0.3,
-    pointRadius: 0,
-    pointHoverRadius: 4,
-    data: s.data.map(d => ({ x: d.x, y: d[labelPrefix === "tokens" ? "y1" : "y2"] })),
-  }));
-}
-
-async function renderCharts() {
-  const tokensData = await api(`/api/series?range=${currentRange}&metric=tokens`);
-  if (tokensData && tokensChart) {
-    const datasets = buildDatasets(tokensData.points, "v1", "v2", "tokens");
-    tokensChart.data.datasets = datasets;
-    tokensChart.update();
-  }
-
-  const tpData = await api(`/api/series?range=${currentRange}&metric=throughput`);
-  if (tpData && throughputChart) {
-    const datasets = buildDatasets(tpData.points, "v1", "v2", "throughput");
-    throughputChart.data.datasets = datasets;
-    throughputChart.update();
-  }
-}
-
-function initCharts() {
-  const chartOpts = makeChartOptions();
-
-  tokensChart = new Chart(document.getElementById("tokens-chart"), {
-    type: "line",
-    data: { datasets: [] },
-    options: chartOpts,
-  });
-
-  throughputChart = new Chart(document.getElementById("throughput-chart"), {
-    type: "line",
-    data: { datasets: [] },
-    options: {
-      ...chartOpts,
-      scales: {
-        ...chartOpts.scales,
-        y: {
-          ...chartOpts.scales.y,
-          ticks: {
-            ...chartOpts.scales.y.ticks,
-            callback: v => v.toFixed(1) + " t/s",
-          }
-        }
-      }
-    },
-  });
-}
-
 // ── Cost Comparison ────────────────────────────────────────────────
 
 let openrouterModels = [];
@@ -731,7 +590,6 @@ async function refresh() {
     renderTotals(),
     renderModelTable(),
     renderDistributionBars(),
-    renderCharts(),
     renderEnergy(),
   ]);
 
@@ -755,7 +613,6 @@ document.querySelectorAll(".range-btn").forEach(btn => {
   initTheme();
   await initSettings();
   initFilters();
-  initCharts();
   initCostComparison();
   refresh();
 
