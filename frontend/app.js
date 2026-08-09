@@ -423,6 +423,23 @@ let openrouterModels = [];
 let costSearchDebounce = null;
 let selectedCostModel = null;
 
+async function loadCostModel() {
+  const settings = await api("/api/settings");
+  if (settings && settings.cost_model) {
+    selectedCostModel = settings.cost_model;
+    document.getElementById("cost-search").value = selectedCostModel;
+    calculateCost(selectedCostModel);
+  }
+}
+
+function saveCostModel(modelId) {
+  fetch("/api/settings", {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({ cost_model: modelId }),
+  });
+}
+
 async function loadOpenRouterModels(query = "") {
   try {
     const url = query
@@ -470,6 +487,7 @@ function renderCostDropdown(models) {
       document.getElementById("cost-search").value = id;
       dropdown.classList.remove("open");
       calculateCost(id);
+      saveCostModel(id);
     });
   });
 
@@ -614,6 +632,7 @@ document.querySelectorAll(".range-btn").forEach(btn => {
   await initSettings();
   initFilters();
   initCostComparison();
+  await loadCostModel();
   refresh();
 
   // Auto-refresh every 15s

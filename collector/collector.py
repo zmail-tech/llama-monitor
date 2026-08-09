@@ -631,6 +631,8 @@ def api_settings_get(conn: sqlite3.Connection) -> dict:
                 settings[key] = float(value)
             except (ValueError, TypeError):
                 settings[key] = 0.12
+        elif key == "cost_model":
+            settings[key] = value or None
         else:
             settings[key] = value
     return settings
