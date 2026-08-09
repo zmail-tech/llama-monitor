@@ -710,18 +710,20 @@ def api_cost_calc(conn: sqlite3.Connection, path: str) -> dict:
 
     first_ts, last_ts = row
 
-    # Get totals at first and last snapshot
+    # Get totals at first and last snapshot (optimized with JOIN)
     def get_totals_at(ts):
         c = conn.execute("""
-            SELECT COALESCE(SUM(prompt_tokens_total), 0),
-                   COALESCE(SUM(predicted_tokens_total), 0)
+            SELECT COALESCE(SUM(s.prompt_tokens_total), 0),
+                   COALESCE(SUM(s.predicted_tokens_total), 0)
             FROM snapshots s
-            WHERE s.ts_epoch = (
-                SELECT MAX(s2.ts_epoch) FROM snapshots s2
-                WHERE s2.ts_epoch <= ?
-                  AND s2.instance = s.instance
-                  AND s2.model = s.model
-            )
+            JOIN (
+                SELECT instance, model, MAX(ts_epoch) as max_ts
+                FROM snapshots
+                WHERE ts_epoch <= ?
+                GROUP BY instance, model
+            ) latest ON s.instance = latest.instance
+                     AND s.model = latest.model
+                     AND s.ts_epoch = latest.max_ts
         """, (ts,))
         r = c.fetchone()
         return r[0], r[1]

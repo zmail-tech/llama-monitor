@@ -1,8 +1,6 @@
 services:
   collector:
-    build: .
-    # Or pull pre-built from GHCR:
-    # image: ghcr.io/zmail-tech/llama-monitor:latest
+    image: ghcr.io/zmail-tech/llama-monitor:latest
     container_name: llama-collector
     env_file: .env
     environment:
