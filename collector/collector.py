@@ -383,35 +383,57 @@ class APIHandler(BaseHTTPRequestHandler):
 # ── API Endpoints ────────────────────────────────────────────────────
 
 def api_summary(conn: sqlite3.Connection) -> dict:
-    """All-time totals per instance+model (latest snapshot)."""
+    """All-time totals per instance+model (MAX cumulative counters).
+
+    llama.cpp resets token counters when you swap models, so the latest
+    snapshot only reflects the current session.  Use MAX() across all
+    snapshots to get the real peak cumulative values.  For live status
+    fields (processing, deferred, throughput), use the latest snapshot.
+    """
+    # Peak cumulative counters + last-seen timestamp
     cur = conn.execute("""
         SELECT instance, model,
-               prompt_tokens_total, predicted_tokens_total,
+               MAX(prompt_tokens_total), MAX(predicted_tokens_total),
+               MAX(prompt_seconds_total), MAX(tokens_predicted_seconds_total),
+               MAX(n_decode_total),
+               MAX(ts_epoch)
+        FROM snapshots
+        GROUP BY instance, model
+        ORDER BY instance, model
+    """)
+    peak_rows = cur.fetchall()
+
+    # Latest snapshot for live status and throughput
+    cur = conn.execute("""
+        SELECT instance, model,
                prompt_tokens_seconds, predicted_tokens_seconds,
-               prompt_seconds_total, tokens_predicted_seconds_total,
-               n_decode_total, requests_processing, requests_deferred,
-               ts
+               requests_processing, requests_deferred, ts
         FROM snapshots s
         WHERE (s.instance, s.model, s.ts_epoch) IN (
             SELECT instance, model, MAX(ts_epoch) FROM snapshots
             GROUP BY instance, model
         )
-        ORDER BY instance, model
     """)
-    rows = cur.fetchall()
+    latest_map = {}
+    for r in cur.fetchall():
+        latest_map[(r[0], r[1])] = {
+            "prompt_tps": r[2], "predicted_tps": r[3],
+            "processing": r[4], "deferred": r[5], "ts": r[6],
+        }
+
     return {
         "totals": [{
             "instance": r[0], "model": r[1],
             "prompt_tokens": r[2], "predicted_tokens": r[3],
-            "prompt_tokens_per_sec": round(r[4], 2),
-            "predicted_tokens_per_sec": round(r[5], 2),
-            "prompt_time_sec": round(r[6], 3),
-            "predict_time_sec": round(r[7], 3),
-            "decodes": r[8],
-            "requests_processing": r[9],
-            "requests_deferred": r[10],
-            "last_seen": r[11],
-        } for r in rows]
+            "prompt_tokens_per_sec": round(latest_map.get((r[0], r[1]), {}).get("prompt_tps", 0), 2),
+            "predicted_tokens_per_sec": round(latest_map.get((r[0], r[1]), {}).get("predicted_tps", 0), 2),
+            "prompt_time_sec": round(r[4], 3),
+            "predict_time_sec": round(r[5], 3),
+            "decodes": r[6],
+            "requests_processing": latest_map.get((r[0], r[1]), {}).get("processing", 0),
+            "requests_deferred": latest_map.get((r[0], r[1]), {}).get("deferred", 0),
+            "last_seen": r[7],
+        } for r in peak_rows]
     }
 
 
@@ -616,6 +638,9 @@ def api_energy(conn: sqlite3.Connection, path: str) -> dict:
             "cost_usd": round(cost, 4),
         })
 
+    # Sort by energy_kwh descending (most energy used first)
+    energy_items.sort(key=lambda x: x["energy_kwh"], reverse=True)
+
     return {
         "range": range_key,
         "watts": watts_map,
@@ -699,40 +724,26 @@ def api_cost_calc(conn: sqlite3.Connection, path: str) -> dict:
     seconds_back = ranges.get(range_key, 86400)
     since = now - seconds_back if seconds_back else 0
 
-    # Get earliest and latest snapshots in range to compute deltas
+    # Use MAX cumulative counters across all snapshots in range.
+    # llama.cpp resets counters on model swap, so peak values represent
+    # the true total — not the latest snapshot.
     cur = conn.execute("""
-        SELECT MIN(ts_epoch) as first_ts, MAX(ts_epoch) as last_ts
-        FROM snapshots WHERE ts_epoch >= ?
+        SELECT instance, model,
+               MAX(prompt_tokens_total), MAX(predicted_tokens_total)
+        FROM snapshots
+        WHERE ts_epoch >= ?
+        GROUP BY instance, model
     """, (since,))
-    row = cur.fetchone()
-    if not row or row[0] is None:
+    rows = cur.fetchall()
+
+    total_prompt = sum(r[2] for r in rows)
+    total_pred = sum(r[3] for r in rows)
+
+    if total_prompt == 0 and total_pred == 0:
         return {"error": "no data in range"}
 
-    first_ts, last_ts = row
-
-    # Get totals at first and last snapshot (optimized with JOIN)
-    def get_totals_at(ts):
-        c = conn.execute("""
-            SELECT COALESCE(SUM(s.prompt_tokens_total), 0),
-                   COALESCE(SUM(s.predicted_tokens_total), 0)
-            FROM snapshots s
-            JOIN (
-                SELECT instance, model, MAX(ts_epoch) as max_ts
-                FROM snapshots
-                WHERE ts_epoch <= ?
-                GROUP BY instance, model
-            ) latest ON s.instance = latest.instance
-                     AND s.model = latest.model
-                     AND s.ts_epoch = latest.max_ts
-        """, (ts,))
-        r = c.fetchone()
-        return r[0], r[1]
-
-    first_prompt, first_pred = get_totals_at(first_ts)
-    last_prompt, last_pred = get_totals_at(last_ts)
-
-    delta_prompt = max(0, last_prompt - first_prompt)
-    delta_pred = max(0, last_pred - first_pred)
+    delta_prompt = total_prompt
+    delta_pred = total_pred
 
     cost = 0.0
     if prompt_price is not None:

@@ -280,6 +280,13 @@ async function renderModelTable() {
   if (filterInstance) totals = totals.filter(t => t.instance === filterInstance);
   if (filterModel) totals = totals.filter(t => t.model === filterModel);
 
+  // Sort by total tokens descending (most used first)
+  totals.sort((a, b) => {
+    const totalA = (a.prompt_tokens || 0) + (a.predicted_tokens || 0);
+    const totalB = (b.prompt_tokens || 0) + (b.predicted_tokens || 0);
+    return totalB - totalA;
+  });
+
   totals.forEach(t => {
     const total = (t.prompt_tokens || 0) + (t.predicted_tokens || 0);
     const tr = document.createElement("tr");
@@ -400,15 +407,27 @@ async function renderEnergy() {
 
   const maxActive = Math.max(...items.map(i => i.active_time_sec), 1);
 
+  // Instance color map — stable color per instance label
+  const instanceColors = {};
+  const instancePalette = ['#cc241d', '#458588', '#b16286', '#d65d0e', '#8ec07c', '#fabd2f'];
+  let instanceIdx = 0;
+
   items.forEach(item => {
+    if (!(item.instance in instanceColors)) {
+      instanceColors[item.instance] = instancePalette[instanceIdx++ % instancePalette.length];
+    }
     const pct = (item.active_time_sec / maxActive) * 100;
+    const color = instanceColors[item.instance];
     const row = document.createElement("div");
     row.className = "energy-row";
     row.innerHTML = `
-      <span class="energy-row-label" title="${item.instance} / ${item.model}">[${item.instance}] ${item.model}</span>
+      <span class="energy-row-label" title="${item.instance} / ${item.model}">
+        <span class="energy-dot" style="background:${color}"></span>
+        ${item.model}
+      </span>
       <span class="energy-row-time">${fmtTime(item.active_time_sec)} (${item.watts}W)</span>
       <div class="energy-bar-bg">
-        <div class="energy-bar-fill" style="width:${pct}%"></div>
+        <div class="energy-bar-fill" style="width:${pct}%;background:${color}"></div>
       </div>
       <span class="energy-row-kwh">${fmtKwh(item.energy_kwh)}</span>
       <span class="energy-row-cost">$${item.cost_usd.toFixed(4)}</span>
