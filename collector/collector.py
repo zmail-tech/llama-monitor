@@ -314,6 +314,9 @@ class APIHandler(BaseHTTPRequestHandler):
             if path == "/api/settings":
                 self._json_response(api_settings_get(self.server.conn))
                 return
+            if path == "/api/export":
+                self._json_response(api_export(self.server.conn))
+                return
 
         self.send_response(404)
         self.end_headers()
@@ -329,6 +332,17 @@ class APIHandler(BaseHTTPRequestHandler):
                 self.end_headers()
                 return
             self._json_response(api_settings_set(self.server.conn, data))
+            return
+        if self.path == "/api/import":
+            content_len = int(self.headers.get("Content-Length", 0))
+            body = self.rfile.read(content_len)
+            try:
+                data = json.loads(body)
+            except json.JSONDecodeError:
+                self.send_response(400)
+                self.end_headers()
+                return
+            self._json_response(api_import(self.server.conn, data))
             return
 
         self.send_response(404)
@@ -735,6 +749,101 @@ def api_cost_calc(conn: sqlite3.Connection, path: str) -> dict:
         "cost_usd": round(cost, 4),
         "cost_formatted": "${:.4f}".format(cost),
         "range": range_key,
+    }
+
+
+# ── Export / Import ────────────────────────────────────────────────
+
+def api_export(conn: sqlite3.Connection) -> dict:
+    """Export all data: snapshots, current_models, settings as JSON."""
+    # Snapshots
+    cur = conn.execute("SELECT ts, ts_epoch, instance, model, prompt_tokens_total, predicted_tokens_total, prompt_tokens_seconds, predicted_tokens_seconds, prompt_seconds_total, tokens_predicted_seconds_total, requests_processing, requests_deferred, n_decode_total, n_busy_slots_per_decode, model_status FROM snapshots ORDER BY ts_epoch")
+    snapshots = []
+    for r in cur.fetchall():
+        snapshots.append({
+            "ts": r[0], "ts_epoch": r[1], "instance": r[2], "model": r[3],
+            "prompt_tokens_total": r[4], "predicted_tokens_total": r[5],
+            "prompt_tokens_seconds": r[6], "predicted_tokens_seconds": r[7],
+            "prompt_seconds_total": r[8], "tokens_predicted_seconds_total": r[9],
+            "requests_processing": r[10], "requests_deferred": r[11],
+            "n_decode_total": r[12], "n_busy_slots_per_decode": r[13],
+            "model_status": r[14],
+        })
+
+    # Current models
+    cur = conn.execute("SELECT instance, model, status, ts FROM current_models")
+    current_models = [{"instance": r[0], "model": r[1], "status": r[2], "ts": r[3]} for r in cur.fetchall()]
+
+    # Settings
+    cur = conn.execute("SELECT key, value FROM settings")
+    settings = {r[0]: r[1] for r in cur.fetchall()}
+
+    return {
+        "version": 1,
+        "exported_at": datetime.now(timezone.utc).isoformat(),
+        "snapshots": snapshots,
+        "current_models": current_models,
+        "settings": settings,
+    }
+
+
+def api_import(conn: sqlite3.Connection, data: dict) -> dict:
+    """Import data from a previous export. Inserts/merges into existing DB."""
+    if data.get("version") != 1:
+        return {"error": "unsupported export version"}
+
+    imported_snapshots = 0
+    imported_models = 0
+    imported_settings = 0
+
+    # Import snapshots
+    for s in data.get("snapshots", []):
+        conn.execute("""
+            INSERT INTO snapshots (ts, ts_epoch, instance, model,
+                prompt_tokens_total, predicted_tokens_total,
+                prompt_tokens_seconds, predicted_tokens_seconds,
+                prompt_seconds_total, tokens_predicted_seconds_total,
+                requests_processing, requests_deferred,
+                n_decode_total, n_busy_slots_per_decode, model_status)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            s["ts"], s["ts_epoch"], s["instance"], s["model"],
+            s.get("prompt_tokens_total", 0), s.get("predicted_tokens_total", 0),
+            s.get("prompt_tokens_seconds", 0), s.get("predicted_tokens_seconds", 0),
+            s.get("prompt_seconds_total", 0), s.get("tokens_predicted_seconds_total", 0),
+            s.get("requests_processing", 0), s.get("requests_deferred", 0),
+            s.get("n_decode_total", 0), s.get("n_busy_slots_per_decode", 0),
+            s.get("model_status", ""),
+        ))
+        imported_snapshots += 1
+
+    # Import current models (merge by instance)
+    for m in data.get("current_models", []):
+        conn.execute("""
+            INSERT INTO current_models (instance, model, status, ts)
+            VALUES (?, ?, ?, ?)
+            ON CONFLICT(instance) DO UPDATE SET
+                model=excluded.model, status=excluded.status, ts=excluded.ts
+        """, (m["instance"], m["model"], m.get("status", ""), m["ts"]))
+        imported_models += 1
+
+    # Import settings (merge by key)
+    for key, value in data.get("settings", {}).items():
+        conn.execute(
+            "INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)",
+            (key, str(value)),
+        )
+        imported_settings += 1
+
+    conn.commit()
+
+    return {
+        "ok": True,
+        "imported": {
+            "snapshots": imported_snapshots,
+            "current_models": imported_models,
+            "settings": imported_settings,
+        },
     }
 
 

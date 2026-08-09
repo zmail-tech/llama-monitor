@@ -565,6 +565,83 @@ function initCostComparison() {
   });
 }
 
+// ── Export / Import ───────────────────────────────────────────────
+
+function initExportImport() {
+  const btnExport = document.getElementById("btn-export");
+  const btnImport = document.getElementById("btn-import");
+  const fileInput = document.getElementById("import-file");
+  const statusEl = document.getElementById("import-status");
+  if (!btnExport || !btnImport || !fileInput) return;
+
+  // Export
+  btnExport.addEventListener("click", async () => {
+    try {
+      const data = await api("/api/export");
+      if (!data) return;
+
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `llama-monitor-export-${new Date().toISOString().slice(0, 10)}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      console.error("Export failed:", e);
+    }
+  });
+
+  // Import button triggers file picker
+  btnImport.addEventListener("click", () => {
+    fileInput.click();
+  });
+
+  // File selected
+  fileInput.addEventListener("change", async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    statusEl.textContent = "Reading file…";
+    statusEl.className = "import-status loading";
+
+    const reader = new FileReader();
+    reader.onload = async (ev) => {
+      try {
+        const data = JSON.parse(ev.target.result);
+        statusEl.textContent = "Importing…";
+
+        const resp = await fetch("/api/import", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(data),
+        });
+        const result = await resp.json();
+
+        if (result.error) {
+          statusEl.textContent = `Error: ${result.error}`;
+          statusEl.className = "import-status error";
+          return;
+        }
+
+        const imp = result.imported;
+        statusEl.textContent = `✓ Imported ${imp.snapshots} snapshots, ${imp.current_models} models, ${imp.settings} settings`;
+        statusEl.className = "import-status success";
+
+        // Refresh dashboard
+        refresh();
+      } catch (err) {
+        statusEl.textContent = `Error: ${err.message}`;
+        statusEl.className = "import-status error";
+      }
+    };
+    reader.readAsText(file);
+
+    // Reset input so same file can be re-imported
+    fileInput.value = "";
+  });
+}
+
 // ── Theme Switching ────────────────────────────────────────────────────
 
 const THEMES = {
@@ -632,6 +709,7 @@ document.querySelectorAll(".range-btn").forEach(btn => {
   await initSettings();
   initFilters();
   initCostComparison();
+  initExportImport();
   await loadCostModel();
   refresh();
 

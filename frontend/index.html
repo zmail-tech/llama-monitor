@@ -68,6 +68,17 @@
         </div>
         <p class="setting-hint">Estimated power draw of each GPU in watts</p>
       </div>
+      <!-- Export / Import -->
+      <div class="setting-group">
+        <label class="setting-label">Data Portability</label>
+        <div class="export-import-row">
+          <button id="btn-export" class="btn-export" title="Export all data and settings as JSON">⬇ Export</button>
+          <button id="btn-import" class="btn-import" title="Import data from a previously exported JSON file">⬆ Import</button>
+          <input type="file" id="import-file" accept=".json" style="display:none">
+        </div>
+        <div id="import-status" class="import-status"></div>
+        <p class="setting-hint">Export your metrics and settings, then import them on another instance</p>
+      </div>
     </div>
     <div class="modal-footer">
       <button id="settings-save" class="btn-save">Save</button>
