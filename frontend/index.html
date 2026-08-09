@@ -13,12 +13,13 @@
     <div id="status-badge" class="badge badge-live">● collecting</div>
   </div>
   <div class="header-right">
-    <div class="theme-picker">
-      <select id="theme-select" title="Change theme">
-        <option value="gruvbox">Gruvbox</option>
-        <option value="synthwave">Synthwave</option>
-        <option value="flashbang">Flashbang</option>
-        <option value="doom">DOOM</option>
+    <!-- Filters -->
+    <div class="filter-group">
+      <select id="filter-instance" title="Filter by instance">
+        <option value="">All Instances</option>
+      </select>
+      <select id="filter-model" title="Filter by model">
+        <option value="">All Models</option>
       </select>
     </div>
     <div class="time-range-picker">
@@ -30,8 +31,49 @@
       <button class="range-btn" data-range="all">All</button>
     </div>
     <div id="last-update" class="meta-text">—</div>
+    <!-- Settings Button -->
+    <button id="settings-btn" class="settings-btn" title="Settings">⚙</button>
   </div>
 </header>
+
+<!-- Settings Modal -->
+<div id="settings-modal" class="modal-overlay">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2>Settings</h2>
+      <button id="settings-close" class="modal-close" title="Close">✕</button>
+    </div>
+    <div class="modal-body">
+      <!-- Theme -->
+      <div class="setting-group">
+        <label class="setting-label">Theme</label>
+        <select id="theme-select">
+          <option value="gruvbox">Gruvbox</option>
+          <option value="synthwave">Synthwave</option>
+          <option value="flashbang">Flashbang</option>
+          <option value="doom">DOOM</option>
+        </select>
+      </div>
+      <!-- Electricity Rate -->
+      <div class="setting-group">
+        <label class="setting-label">Electricity Rate ($/kWh)</label>
+        <input type="number" id="setting-rate" min="0" step="0.01" value="0.12" placeholder="e.g. 0.12">
+        <p class="setting-hint">Your electricity cost per kilowatt-hour</p>
+      </div>
+      <!-- Per-Instance Wattage -->
+      <div class="setting-group">
+        <label class="setting-label">GPU Wattage per Instance</label>
+        <div id="watts-inputs" class="watts-inputs">
+          <!-- Populated dynamically by JS -->
+        </div>
+        <p class="setting-hint">Estimated power draw of each GPU in watts</p>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button id="settings-save" class="btn-save">Save</button>
+    </div>
+  </div>
+</div>
 
 <main>
   <!-- Current State -->
@@ -63,6 +105,31 @@
       <div class="stat-label">Avg Throughput</div>
       <div class="stat-value accent-aqua" id="avg-throughput">—</div>
       <div class="stat-sub">tokens/sec (generated)</div>
+    </div>
+  </section>
+
+  <!-- Energy Stats -->
+  <section class="card" id="energy-section">
+    <h2 class="card-title">Energy Usage</h2>
+    <div class="energy-summary" id="energy-summary">
+      <div class="stat-card">
+        <div class="stat-label">Active Time</div>
+        <div class="stat-value accent-orange" id="energy-active">—</div>
+        <div class="stat-sub">prompt + generation</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Energy Consumed</div>
+        <div class="stat-value accent-red" id="energy-kwh">—</div>
+        <div class="stat-sub">kWh</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Est. Cost</div>
+        <div class="stat-value accent-yellow" id="energy-cost">—</div>
+        <div class="stat-sub" id="energy-cost-sub">$0.00/kWh</div>
+      </div>
+    </div>
+    <div class="energy-breakdown" id="energy-breakdown">
+      <!-- Populated by JS -->
     </div>
   </section>
 

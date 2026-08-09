@@ -138,6 +138,12 @@ def init_db(conn: sqlite3.Connection):
             status TEXT DEFAULT '',
             ts TEXT NOT NULL
         );
+
+        -- User dashboard settings (persisted server-side)
+        CREATE TABLE IF NOT EXISTS settings (
+            key TEXT NOT NULL UNIQUE,
+            value TEXT NOT NULL
+        );
     """)
 
 # ── Scraping ─────────────────────────────────────────────────────────
@@ -302,6 +308,28 @@ class APIHandler(BaseHTTPRequestHandler):
             if path.startswith("/api/cost-calc"):
                 self._json_response(api_cost_calc(self.server.conn, self.path))
                 return
+            if path.startswith("/api/energy"):
+                self._json_response(api_energy(self.server.conn, self.path))
+                return
+            if path == "/api/settings":
+                self._json_response(api_settings_get(self.server.conn))
+                return
+
+        self.send_response(404)
+        self.end_headers()
+
+    def do_POST(self):
+        if self.path == "/api/settings":
+            content_len = int(self.headers.get("Content-Length", 0))
+            body = self.rfile.read(content_len)
+            try:
+                data = json.loads(body)
+            except json.JSONDecodeError:
+                self.send_response(400)
+                self.end_headers()
+                return
+            self._json_response(api_settings_set(self.server.conn, data))
+            return
 
         self.send_response(404)
         self.end_headers()
@@ -472,6 +500,153 @@ def api_openrouter_models(path: str) -> dict:
         "models": models,
         "total": len(models),
     }
+
+
+def api_energy(conn: sqlite3.Connection, path: str) -> dict:
+    """Calculate energy consumption from active processing time.
+    Query params: ?range=24h&rate=0.12&watts={"llama-1":400,"llama-2":150}&instance=llama-1&model=Qwen-Max
+    """
+    from urllib.parse import urlparse, parse_qs
+    qs = parse_qs(urlparse(path).query)
+    range_key = qs.get("range", ["24h"])[0]
+    rate = float(qs.get("rate", [0.12])[0])
+    filter_instance = qs.get("instance", [None])[0]
+    filter_model = qs.get("model", [None])[0]
+
+    # Parse per-instance wattage JSON: {"llama-1": 400, "llama-2": 150}
+    # Also supports plain number for backward compat: watts=450
+    watts_map = {}
+    raw_watts = qs.get("watts", ["{}"])[0]
+    try:
+        parsed = json.loads(raw_watts)
+        if isinstance(parsed, dict):
+            watts_map = parsed
+        elif isinstance(parsed, (int, float)):
+            watts_map = {"__default__": parsed}
+    except (json.JSONDecodeError, TypeError):
+        pass
+
+    now = time.time()
+    ranges = {
+        "1h": 3600, "6h": 21600, "24h": 86400,
+        "7d": 604800, "30d": 2592000, "all": 0,
+    }
+    seconds_back = ranges.get(range_key, 86400)
+    since = now - seconds_back if seconds_back else 0
+
+    where = "ts_epoch >= ?"
+    params: list = [since]
+    if filter_instance:
+        where += " AND instance = ?"
+        params.append(filter_instance)
+    if filter_model:
+        where += " AND model = ?"
+        params.append(filter_model)
+
+    cur = conn.execute(f"""
+        SELECT s.instance, s.model,
+               MAX(s.prompt_seconds_total), MAX(s.tokens_predicted_seconds_total)
+        FROM snapshots s
+        WHERE {where}
+        GROUP BY s.instance, s.model
+        ORDER BY s.instance, s.model
+    """, params)
+    rows = cur.fetchall()
+
+    cur2 = conn.execute(f"""
+        SELECT s.instance, s.model,
+               MIN(s.prompt_seconds_total), MIN(s.tokens_predicted_seconds_total)
+        FROM snapshots s
+        WHERE {where}
+        GROUP BY s.instance, s.model
+        ORDER BY s.instance, s.model
+    """, params)
+    first_rows = cur2.fetchall()
+
+    first_map = {(r[0], r[1]): (r[2], r[3]) for r in first_rows}
+
+    energy_items = []
+    total_active_sec = 0.0
+    total_kwh = 0.0
+    total_cost = 0.0
+
+    for r in rows:
+        instance, model, max_prompt_sec, max_pred_sec = r
+        min_prompt_sec, min_pred_sec = first_map.get((instance, model), (0, 0))
+
+        # Handle counter resets: if max < min, the counter reset — use max as the value
+        delta_prompt = max(0, max_prompt_sec - min_prompt_sec) if max_prompt_sec >= min_prompt_sec else max_prompt_sec
+        delta_pred = max(0, max_pred_sec - min_pred_sec) if max_pred_sec >= min_pred_sec else max_pred_sec
+        active_sec = delta_prompt + delta_pred
+
+        watts = watts_map.get(instance, watts_map.get("__default__", 0))
+        if watts > 0:
+            kwh = (active_sec * watts) / 3600000
+            cost = kwh * rate
+        else:
+            kwh = 0.0
+            cost = 0.0
+
+        total_active_sec += active_sec
+        total_kwh += kwh
+        total_cost += cost
+
+        energy_items.append({
+            "instance": instance,
+            "model": model,
+            "watts": watts,
+            "prompt_time_sec": round(delta_prompt, 2),
+            "predict_time_sec": round(delta_pred, 2),
+            "active_time_sec": round(active_sec, 2),
+            "energy_kwh": round(kwh, 6),
+            "cost_usd": round(cost, 4),
+        })
+
+    return {
+        "range": range_key,
+        "watts": watts_map,
+        "rate_per_kwh": rate,
+        "items": energy_items,
+        "totals": {
+            "active_time_sec": round(total_active_sec, 2),
+            "energy_kwh": round(total_kwh, 6),
+            "cost_usd": round(total_cost, 4),
+        },
+    }
+
+
+def api_settings_get(conn: sqlite3.Connection) -> dict:
+    """Read dashboard settings from SQLite."""
+    cur = conn.execute("SELECT key, value FROM settings")
+    rows = cur.fetchall()
+    settings = {}
+    for key, value in rows:
+        if key == "energy_watts":
+            try:
+                settings[key] = json.loads(value)
+            except json.JSONDecodeError:
+                settings[key] = {}
+        elif key == "energy_rate":
+            try:
+                settings[key] = float(value)
+            except (ValueError, TypeError):
+                settings[key] = 0.12
+        else:
+            settings[key] = value
+    return settings
+
+
+def api_settings_set(conn: sqlite3.Connection, data: dict) -> dict:
+    """Save dashboard settings to SQLite."""
+    for key, value in data.items():
+        if isinstance(value, (dict, list)):
+            value = json.dumps(value)
+        conn.execute(
+            "INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)",
+            (key, str(value)),
+        )
+    conn.commit()
+    return {"ok": True, "saved": list(data.keys())}
 
 
 def api_cost_calc(conn: sqlite3.Connection, path: str) -> dict:

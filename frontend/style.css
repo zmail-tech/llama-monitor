@@ -90,9 +90,16 @@ header h1 .accent {
   gap: 16px;
 }
 
-/* ── Theme Picker ───────────────────────────────────────── */
+/* ── Theme Picker (legacy - moved to settings) ──────────── */
 
-.theme-picker select {
+/* ── Filter Dropdowns ───────────────────────────────────── */
+
+.filter-group {
+  display: flex;
+  gap: 6px;
+}
+
+.filter-group select {
   background: var(--bg1);
   border: 1px solid var(--bg2);
   border-radius: 4px;
@@ -106,20 +113,295 @@ header h1 .accent {
   transition: border-color 0.15s;
 }
 
-.theme-picker select:hover {
+.filter-group select:hover {
   border-color: var(--bg3);
 }
 
-.theme-picker select:focus {
+.filter-group select:focus {
   border-color: var(--blue);
 }
 
-.theme-picker select option {
+.filter-group select option {
   background: var(--bg0-h);
   color: var(--fg1);
 }
 
-/* ── Badges ─────────────────────────────────────────────── */
+/* ── Settings Button ────────────────────────────────────── */
+
+.settings-btn {
+  background: transparent;
+  border: 1px solid var(--bg2);
+  border-radius: 4px;
+  color: var(--fg3);
+  width: 32px;
+  height: 32px;
+  font-size: 1.1rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+}
+
+.settings-btn:hover {
+  color: var(--fg0);
+  border-color: var(--bg3);
+  background: var(--bg1);
+}
+
+/* ── Settings Modal ─────────────────────────────────────── */
+
+.modal-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 1000;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-overlay.open {
+  display: flex;
+}
+
+.modal-content {
+  background: var(--bg0-h);
+  border: 1px solid var(--bg2);
+  border-radius: 10px;
+  width: 420px;
+  max-width: 90vw;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5);
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--bg1);
+}
+
+.modal-header h2 {
+  font-size: 1rem;
+  color: var(--fg0);
+  font-weight: 700;
+}
+
+.modal-close {
+  background: transparent;
+  border: none;
+  color: var(--fg3);
+  font-size: 1.1rem;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: all 0.15s;
+}
+
+.modal-close:hover {
+  color: var(--fg0);
+  background: var(--bg1);
+}
+
+.modal-body {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.setting-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.setting-label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--fg3);
+  font-weight: 600;
+}
+
+.setting-group input,
+.setting-group select {
+  background: var(--bg0);
+  border: 1px solid var(--bg2);
+  border-radius: 4px;
+  color: var(--fg0);
+  padding: 8px 12px;
+  font-family: inherit;
+  font-size: 0.85rem;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.setting-group input:focus,
+.setting-group select:focus {
+  border-color: var(--blue);
+}
+
+.setting-group select option {
+  background: var(--bg0);
+  color: var(--fg1);
+}
+
+.setting-hint {
+  font-size: 0.7rem;
+  color: var(--fg4);
+  margin: 0;
+}
+
+.watts-inputs {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.watts-input-row {
+  display: grid;
+  grid-template-columns: 1fr 100px;
+  align-items: center;
+  gap: 8px;
+}
+
+.watts-input-row label {
+  font-size: 0.8rem;
+  color: var(--fg2);
+  font-weight: 500;
+}
+
+.watts-input-row input {
+  background: var(--bg0);
+  border: 1px solid var(--bg2);
+  border-radius: 4px;
+  color: var(--fg0);
+  padding: 6px 10px;
+  font-family: inherit;
+  font-size: 0.85rem;
+  outline: none;
+  transition: border-color 0.15s;
+  text-align: right;
+}
+
+.watts-input-row input:focus {
+  border-color: var(--blue);
+}
+
+.watts-input-row input::placeholder {
+  color: var(--fg4);
+}
+
+.modal-footer {
+  padding: 12px 16px;
+  border-top: 1px solid var(--bg2);
+  display: flex;
+  justify-content: flex-end;
+}
+
+.btn-save {
+  background: var(--green);
+  color: var(--bg0);
+  border: none;
+  border-radius: 4px;
+  padding: 8px 20px;
+  font-family: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.1s;
+}
+
+.btn-save:hover {
+  background: #a8b846;
+}
+
+.btn-save:active {
+  transform: scale(0.97);
+}
+
+.btn-save.saved {
+  background: var(--blue);
+  pointer-events: none;
+}
+
+/* ── Energy Section ─────────────────────────────────────── */
+
+#energy-section {
+  /* inherits .card styles */
+}
+
+.energy-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.energy-breakdown {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.energy-row {
+  display: grid;
+  grid-template-columns: 120px 160px 1fr 90px 90px;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  border-radius: 4px;
+  background: var(--bg1);
+}
+
+.energy-row-label {
+  font-size: 0.82rem;
+  color: var(--fg2);
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.energy-row-time {
+  font-size: 0.78rem;
+  color: var(--fg3);
+  font-variant-numeric: tabular-nums;
+}
+
+.energy-bar-bg {
+  background: var(--bg0);
+  border-radius: 3px;
+  height: 16px;
+  overflow: hidden;
+}
+
+.energy-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  background: var(--orange);
+  transition: width 0.4s ease;
+  min-width: 2px;
+}
+
+.energy-row-kwh {
+  font-size: 0.78rem;
+  color: var(--fg3);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.energy-row-cost {
+  font-size: 0.78rem;
+  color: var(--yellow-b);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+/* ── Cost Comparison ─────────────────────────────────────────────── */
 
 .badge {
   display: inline-block;
@@ -665,6 +947,13 @@ footer {
   .dist-row {
     grid-template-columns: 140px 1fr 70px;
   }
+  .energy-row {
+    grid-template-columns: 100px 1fr 80px;
+  }
+  .energy-row-time,
+  .energy-row-kwh {
+    display: none;
+  }
 }
 
 @media (max-width: 600px) {
@@ -680,5 +969,14 @@ footer {
   }
   .dist-value {
     display: none;
+  }
+  .energy-row {
+    grid-template-columns: 80px 1fr 70px;
+  }
+  .energy-row-time {
+    display: none;
+  }
+  .filter-group {
+    flex-wrap: wrap;
   }
 }

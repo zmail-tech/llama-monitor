@@ -7,6 +7,12 @@ let currentRange = "24h";
 let tokensChart = null;
 let throughputChart = null;
 let refreshTimer = null;
+let filterInstance = "";
+let filterModel = "";
+
+// Energy settings
+let energyWattsMap = {};  // { "llama-1": 400, "llama-2": 150 }
+let energyRate = 0.12;
 
 // Gruvbox palette for chart datasets
 const COLORS = [
@@ -50,6 +56,12 @@ function fmtTimestamp(ts) {
   });
 }
 
+function fmtKwh(kwh) {
+  if (kwh == null || isNaN(kwh) || kwh === 0) return "—";
+  if (kwh < 0.001) return (kwh * 1000).toFixed(1) + " Wh";
+  return kwh.toFixed(4) + " kWh";
+}
+
 // ── API Calls ──────────────────────────────────────────────
 
 async function api(path) {
@@ -59,6 +71,135 @@ async function api(path) {
   } catch (e) {
     console.error("API error:", e);
     return null;
+  }
+}
+
+// ── Settings Modal ─────────────────────────────────────────
+
+async function initSettings() {
+  const modal = document.getElementById("settings-modal");
+  const btn = document.getElementById("settings-btn");
+  const close = document.getElementById("settings-close");
+  const saveBtn = document.getElementById("settings-save");
+  const rateInput = document.getElementById("setting-rate");
+  const themeSelect = document.getElementById("theme-select");
+  const wattsContainer = document.getElementById("watts-inputs");
+
+  // Load saved settings from server
+  const settings = await api("/api/settings");
+
+  // Restore saved wattage map (server-side)
+  if (settings && settings.energy_watts) {
+    energyWattsMap = settings.energy_watts;
+  }
+  if (settings && settings.energy_rate != null) {
+    energyRate = settings.energy_rate;
+    rateInput.value = energyRate;
+  }
+
+  // Build per-instance wattage inputs
+  const instData = await api("/api/instances");
+  if (instData) {
+    wattsContainer.innerHTML = instData.instances.map(inst => {
+      const w = energyWattsMap[inst] || "";
+      return `<div class="watts-input-row">
+        <label for="watt-${inst}">${inst}</label>
+        <input type="number" id="watt-${inst}" data-instance="${inst}"
+               min="0" step="1" value="${w}" placeholder="W">
+      </div>`;
+    }).join("");
+  }
+
+  // Open/close
+  btn.addEventListener("click", () => modal.classList.add("open"));
+  close.addEventListener("click", () => modal.classList.remove("open"));
+  modal.addEventListener("click", (e) => {
+    if (e.target === modal) modal.classList.remove("open");
+  });
+
+  // Save button — persist to server
+  saveBtn.addEventListener("click", () => {
+    // Collect wattage from inputs
+    wattsContainer.querySelectorAll("input").forEach(input => {
+      const inst = input.dataset.instance;
+      const val = parseFloat(input.value) || 0;
+      energyWattsMap[inst] = val;
+    });
+
+    // Collect rate
+    energyRate = parseFloat(rateInput.value) || 0;
+
+    // Persist to server
+    fetch("/api/settings", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({
+        energy_watts: energyWattsMap,
+        energy_rate: energyRate,
+      }),
+    });
+
+    // Visual feedback
+    saveBtn.textContent = "✓ Saved";
+    saveBtn.classList.add("saved");
+
+    // Close modal after short delay
+    setTimeout(() => {
+      modal.classList.remove("open");
+      // Reset button after close
+      setTimeout(() => {
+        saveBtn.textContent = "Save";
+        saveBtn.classList.remove("saved");
+      }, 400);
+    }, 600);
+
+    // Trigger dashboard recalculation
+    refresh();
+  });
+
+  // Theme change in settings
+  themeSelect.addEventListener("change", (e) => {
+    setTheme(e.target.value);
+  });
+}
+
+// ── Filters ────────────────────────────────────────────────
+
+function initFilters() {
+  const instanceSelect = document.getElementById("filter-instance");
+  const modelSelect = document.getElementById("filter-model");
+
+  // Load available instances and models
+  loadFilterOptions();
+
+  instanceSelect.addEventListener("change", () => {
+    filterInstance = instanceSelect.value;
+    refresh();
+  });
+
+  modelSelect.addEventListener("change", () => {
+    filterModel = modelSelect.value;
+    refresh();
+  });
+}
+
+async function loadFilterOptions() {
+  const [instData, modelData] = await Promise.all([
+    api("/api/instances"),
+    api("/api/models"),
+  ]);
+
+  const instanceSelect = document.getElementById("filter-instance");
+  const modelSelect = document.getElementById("filter-model");
+
+  if (instData) {
+    instanceSelect.innerHTML = '<option value="">All Instances</option>' +
+      instData.instances.map(i => `<option value="${i}">${i}</option>`).join("");
+  }
+
+  if (modelData) {
+    modelSelect.innerHTML = '<option value="">All Models</option>' +
+      modelData.models.map(m => `<option value="${m}">${m}</option>`).join("");
   }
 }
 
@@ -94,11 +235,16 @@ async function renderTotals() {
   const data = await api("/api/summary");
   if (!data || !data.totals.length) return;
 
+  // Apply filters
+  let totals = data.totals;
+  if (filterInstance) totals = totals.filter(t => t.instance === filterInstance);
+  if (filterModel) totals = totals.filter(t => t.model === filterModel);
+
   let totalPrompt = 0, totalPredicted = 0;
   let totalPredictedTps = 0;
   let throughputCount = 0;
 
-  data.totals.forEach(t => {
+  totals.forEach(t => {
     totalPrompt += t.prompt_tokens || 0;
     totalPredicted += t.predicted_tokens || 0;
     if (t.predicted_tokens_per_sec > 0) {
@@ -117,8 +263,11 @@ async function renderTotals() {
   // Sub labels with time range
   const rangeLabel = currentRange === "all" ? "all time"
     : `last ${currentRange}`;
-  document.getElementById("total-prompt-sub").textContent = rangeLabel;
-  document.getElementById("total-predicted-sub").textContent = rangeLabel;
+  const filterLabel = filterInstance || filterModel
+    ? ` · ${filterInstance}${filterInstance && filterModel ? ' / ' : ''}${filterModel}`
+    : '';
+  document.getElementById("total-prompt-sub").textContent = rangeLabel + filterLabel;
+  document.getElementById("total-predicted-sub").textContent = rangeLabel + filterLabel;
 }
 
 async function renderModelTable() {
@@ -128,7 +277,12 @@ async function renderModelTable() {
   const tbody = document.getElementById("model-tbody");
   tbody.innerHTML = "";
 
-  data.totals.forEach(t => {
+  // Apply filters
+  let totals = data.totals;
+  if (filterInstance) totals = totals.filter(t => t.instance === filterInstance);
+  if (filterModel) totals = totals.filter(t => t.model === filterModel);
+
+  totals.forEach(t => {
     const total = (t.prompt_tokens || 0) + (t.predicted_tokens || 0);
     const tr = document.createElement("tr");
     tr.innerHTML = `
@@ -147,7 +301,7 @@ async function renderModelTable() {
     tbody.appendChild(tr);
   });
 
-  document.getElementById("instance-count").textContent = new Set(data.totals.map(t => t.instance)).size;
+  document.getElementById("instance-count").textContent = new Set(totals.map(t => t.instance)).size;
 }
 
 async function renderDistributionBars() {
@@ -157,9 +311,14 @@ async function renderDistributionBars() {
   const container = document.getElementById("dist-bars");
   container.innerHTML = "";
 
+  // Apply filters
+  let totals = data.totals;
+  if (filterInstance) totals = totals.filter(t => t.instance === filterInstance);
+  if (filterModel) totals = totals.filter(t => t.model === filterModel);
+
   // Aggregate by model across instances
   const modelMap = {};
-  data.totals.forEach(t => {
+  totals.forEach(t => {
     const key = t.model;
     if (!modelMap[key]) modelMap[key] = { prompt: 0, predicted: 0, instances: new Set() };
     modelMap[key].prompt += t.prompt_tokens || 0;
@@ -193,9 +352,76 @@ async function renderDistributionBars() {
   });
 }
 
+// ── Energy ─────────────────────────────────────────────────
+
+async function renderEnergy() {
+  // Load settings from server on every render
+  const settings = await api("/api/settings");
+  if (settings) {
+    if (settings.energy_watts) energyWattsMap = settings.energy_watts;
+    if (settings.energy_rate != null) energyRate = settings.energy_rate;
+  }
+
+  const params = new URLSearchParams({
+    range: currentRange,
+    watts: JSON.stringify(energyWattsMap),
+    rate: energyRate,
+  });
+  if (filterInstance) params.set("instance", filterInstance);
+  if (filterModel) params.set("model", filterModel);
+
+  const data = await api(`/api/energy?${params}`);
+  if (!data || !data.items.length) {
+    document.getElementById("energy-active").textContent = "—";
+    document.getElementById("energy-kwh").textContent = "—";
+    document.getElementById("energy-cost").textContent = "—";
+    // Build wattage summary string
+    const wattSummary = Object.entries(energyWattsMap)
+      .filter(([, w]) => w > 0)
+      .map(([i, w]) => `${i}: ${w}W`)
+      .join(" · ") || "set watts in ⚙";
+    document.getElementById("energy-cost-sub").textContent = `$${energyRate.toFixed(2)}/kWh · ${wattSummary}`;
+    document.getElementById("energy-breakdown").innerHTML = "";
+    return;
+  }
+
+  const { totals, items } = data;
+
+  document.getElementById("energy-active").textContent = fmtTime(totals.active_time_sec);
+  document.getElementById("energy-kwh").textContent = fmtKwh(totals.energy_kwh);
+  document.getElementById("energy-cost").textContent = `$${totals.cost_usd.toFixed(4)}`;
+  const wattSummary = Object.entries(energyWattsMap)
+    .filter(([, w]) => w > 0)
+    .map(([i, w]) => `${i}: ${w}W`)
+    .join(" · ") || "set watts in ⚙";
+  document.getElementById("energy-cost-sub").textContent = `$${energyRate.toFixed(2)}/kWh · ${wattSummary}`;
+
+  // Breakdown
+  const container = document.getElementById("energy-breakdown");
+  container.innerHTML = "";
+
+  const maxActive = Math.max(...items.map(i => i.active_time_sec), 1);
+
+  items.forEach(item => {
+    const pct = (item.active_time_sec / maxActive) * 100;
+    const row = document.createElement("div");
+    row.className = "energy-row";
+    row.innerHTML = `
+      <span class="energy-row-label" title="${item.instance} / ${item.model}">[${item.instance}] ${item.model}</span>
+      <span class="energy-row-time">${fmtTime(item.active_time_sec)} (${item.watts}W)</span>
+      <div class="energy-bar-bg">
+        <div class="energy-bar-fill" style="width:${pct}%"></div>
+      </div>
+      <span class="energy-row-kwh">${fmtKwh(item.energy_kwh)}</span>
+      <span class="energy-row-cost">$${item.cost_usd.toFixed(4)}</span>
+    `;
+    container.appendChild(row);
+  });
+}
+
 // ── Charts ─────────────────────────────────────────────────
 
-function makeChartOptions(title) {
+function makeChartOptions() {
   return {
     responsive: true,
     maintainAspectRatio: false,
@@ -261,7 +487,6 @@ function makeChartOptions(title) {
 }
 
 function buildDatasets(points, valueKey1, valueKey2, labelPrefix) {
-  // Aggregate by instance+model, group points by time
   const seriesMap = {};
 
   points.forEach(p => {
@@ -272,7 +497,6 @@ function buildDatasets(points, valueKey1, valueKey2, labelPrefix) {
     seriesMap[key].data.push({ x: p.ts, y1: p.v1, y2: p.v2 });
   });
 
-  // Assign colors
   Object.keys(seriesMap).forEach((k, i) => {
     seriesMap[k].color = COLORS[i % COLORS.length];
   });
@@ -291,7 +515,6 @@ function buildDatasets(points, valueKey1, valueKey2, labelPrefix) {
 }
 
 async function renderCharts() {
-  // Tokens chart
   const tokensData = await api(`/api/series?range=${currentRange}&metric=tokens`);
   if (tokensData && tokensChart) {
     const datasets = buildDatasets(tokensData.points, "v1", "v2", "tokens");
@@ -299,7 +522,6 @@ async function renderCharts() {
     tokensChart.update();
   }
 
-  // Throughput chart
   const tpData = await api(`/api/series?range=${currentRange}&metric=throughput`);
   if (tpData && throughputChart) {
     const datasets = buildDatasets(tpData.points, "v1", "v2", "throughput");
@@ -367,7 +589,6 @@ function renderCostDropdown(models) {
     return;
   }
 
-  // Show max 50 results to avoid DOM bloat
   const shown = models.slice(0, 50);
   const fmtPrice = (p) => p != null ? `$${(parseFloat(p) * 1000000).toFixed(2)}/M` : "—";
   dropdown.innerHTML = shown.map(m => {
@@ -383,7 +604,6 @@ function renderCostDropdown(models) {
     dropdown.innerHTML += `<div class="cost-dropdown-empty">…and ${models.length - 50} more (type to narrow)</div>`;
   }
 
-  // Click handlers
   dropdown.querySelectorAll(".cost-dropdown-item").forEach(item => {
     item.addEventListener("click", () => {
       const id = item.dataset.id;
@@ -443,13 +663,11 @@ async function calculateCost(modelId) {
   }
 }
 
-// Initialize cost comparison search
 function initCostComparison() {
   const input = document.getElementById("cost-search");
   const dropdown = document.getElementById("cost-dropdown");
   if (!input || !dropdown) return;
 
-  // Load models on focus or input
   input.addEventListener("focus", () => {
     if (!input.value) {
       loadOpenRouterModels();
@@ -463,21 +681,44 @@ function initCostComparison() {
     }, 250);
   });
 
-  // Close dropdown on outside click
   document.addEventListener("click", (e) => {
     if (!e.target.closest(".cost-input-row")) {
       dropdown.classList.remove("open");
     }
   });
+}
 
-  // Recalculate when time range changes
-  const origRefresh = window.refresh;
-  window.refresh = async function () {
-    await origRefresh();
-    if (selectedCostModel) {
-      calculateCost(selectedCostModel);
-    }
-  };
+// ── Theme Switching ────────────────────────────────────────────────────
+
+const THEMES = {
+  gruvbox: null,
+  synthwave: "theme-synthwave.css",
+  flashbang: "theme-flashbang.css",
+  doom: "theme-doom.css",
+};
+
+function setTheme(name) {
+  const linkId = "theme-stylesheet";
+  let link = document.getElementById(linkId);
+
+  if (link) link.remove();
+
+  if (name !== "gruvbox" && THEMES[name]) {
+    link = document.createElement("link");
+    link.id = linkId;
+    link.rel = "stylesheet";
+    link.href = `/${THEMES[name]}`;
+    document.head.appendChild(link);
+  }
+
+  localStorage.setItem("llama-monitor-theme", name);
+  const sel = document.getElementById("theme-select");
+  if (sel) sel.value = name;
+}
+
+function initTheme() {
+  const saved = localStorage.getItem("llama-monitor-theme") || "gruvbox";
+  setTheme(saved);
 }
 
 // ── Main ───────────────────────────────────────────────────
@@ -491,6 +732,7 @@ async function refresh() {
     renderModelTable(),
     renderDistributionBars(),
     renderCharts(),
+    renderEnergy(),
   ]);
 
   const elapsed = Math.round(performance.now() - start);
@@ -508,50 +750,15 @@ document.querySelectorAll(".range-btn").forEach(btn => {
   });
 });
 
-// ── Theme Switching ────────────────────────────────────────────────────
-
-const THEMES = {
-  gruvbox: null,
-  synthwave: "theme-synthwave.css",
-  flashbang: "theme-flashbang.css",
-  doom: "theme-doom.css",
-};
-
-function setTheme(name) {
-  const linkId = "theme-stylesheet";
-  let link = document.getElementById(linkId);
-
-  // Remove existing theme
-  if (link) link.remove();
-
-  // Apply new theme (null = default gruvbox)
-  if (name !== "gruvbox" && THEMES[name]) {
-    link = document.createElement("link");
-    link.id = linkId;
-    link.rel = "stylesheet";
-    link.href = `/${THEMES[name]}`;
-    document.head.appendChild(link);
-  }
-
-  // Persist
-  localStorage.setItem("llama-monitor-theme", name);
-  document.getElementById("theme-select").value = name;
-}
-
-function initTheme() {
-  const saved = localStorage.getItem("llama-monitor-theme") || "gruvbox";
-  setTheme(saved);
-
-  document.getElementById("theme-select").addEventListener("change", (e) => {
-    setTheme(e.target.value);
-  });
-}
-
 // Init
-initTheme();
-initCharts();
-initCostComparison();
-refresh();
+(async () => {
+  initTheme();
+  await initSettings();
+  initFilters();
+  initCharts();
+  initCostComparison();
+  refresh();
 
-// Auto-refresh every 15s
-refreshTimer = setInterval(refresh, 15000);
+  // Auto-refresh every 15s
+  refreshTimer = setInterval(refresh, 15000);
+})();

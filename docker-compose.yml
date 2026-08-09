@@ -1,8 +1,8 @@
 services:
   collector:
-    image: ghcr.io/zmail-tech/llama-monitor:latest
-    # For local development, comment out `image` and uncomment `build`:
-    # build: ./collector
+    build: .
+    # Or pull pre-built from GHCR:
+    # image: ghcr.io/zmail-tech/llama-monitor:latest
     container_name: llama-collector
     env_file: .env
     environment:
