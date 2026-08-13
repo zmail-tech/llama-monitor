@@ -344,6 +344,12 @@ async function renderDistributionBars() {
   const canvas = document.getElementById("dist-pie");
   if (!canvas) return;
 
+  // Fallback to bars if Chart.js didn't load
+  if (typeof Chart === "undefined") {
+    canvas.parentElement.innerHTML = '<div style="color:#fb4934;text-align:center;padding:20px;">Chart.js failed to load — check network/CDN</div>';
+    return;
+  }
+
   if (!distPieChart) {
     const ctx = canvas.getContext("2d");
     distPieChart = new Chart(ctx, {
@@ -432,7 +438,7 @@ async function renderEnergy() {
   const container = document.getElementById("energy-breakdown");
   container.innerHTML = "";
 
-  const maxActive = Math.max(...items.map(i => i.active_time_sec), 1);
+  const totalActive = items.map(i => i.active_time_sec).reduce((a, b) => a + b, 0) || 1;
 
   // Instance color map — stable color per instance label
   const instanceColors = {};
@@ -443,7 +449,7 @@ async function renderEnergy() {
     if (!(item.instance in instanceColors)) {
       instanceColors[item.instance] = instancePalette[instanceIdx++ % instancePalette.length];
     }
-    const pct = (item.active_time_sec / maxActive) * 100;
+    const pct = (item.active_time_sec / totalActive) * 100;
     const color = instanceColors[item.instance];
     const row = document.createElement("div");
     row.className = "energy-row";
