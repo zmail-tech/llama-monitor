@@ -286,36 +286,72 @@ class APIHandler(BaseHTTPRequestHandler):
                     self._serve_file(fpath, self._guess_ct(fpath))
                     return
 
-            # API endpoints
+            # API endpoints — each request gets its own DB connection
             if path == "/api/summary":
-                self._json_response(api_summary(self.server.conn))
+                conn = get_db()
+                try:
+                    self._json_response(api_summary(conn))
+                finally:
+                    conn.close()
                 return
             if path.startswith("/api/series"):
-                self._json_response(api_series(self.server.conn, self.path))
+                conn = get_db()
+                try:
+                    self._json_response(api_series(conn, self.path))
+                finally:
+                    conn.close()
                 return
             if path == "/api/current":
-                self._json_response(api_current(self.server.conn))
+                conn = get_db()
+                try:
+                    self._json_response(api_current(conn))
+                finally:
+                    conn.close()
                 return
             if path == "/api/models":
-                self._json_response(api_models(self.server.conn))
+                conn = get_db()
+                try:
+                    self._json_response(api_models(conn))
+                finally:
+                    conn.close()
                 return
             if path == "/api/instances":
-                self._json_response(api_instances(self.server.conn))
+                conn = get_db()
+                try:
+                    self._json_response(api_instances(conn))
+                finally:
+                    conn.close()
                 return
             if path.startswith("/api/openrouter-models"):
                 self._json_response(api_openrouter_models(self.path))
                 return
             if path.startswith("/api/cost-calc"):
-                self._json_response(api_cost_calc(self.server.conn, self.path))
+                conn = get_db()
+                try:
+                    self._json_response(api_cost_calc(conn, self.path))
+                finally:
+                    conn.close()
                 return
             if path.startswith("/api/energy"):
-                self._json_response(api_energy(self.server.conn, self.path))
+                conn = get_db()
+                try:
+                    self._json_response(api_energy(conn, self.path))
+                finally:
+                    conn.close()
                 return
             if path == "/api/settings":
-                self._json_response(api_settings_get(self.server.conn))
+                conn = get_db()
+                try:
+                    self._json_response(api_settings_get(conn))
+                finally:
+                    conn.close()
                 return
             if path == "/api/export":
-                self._json_response(api_export(self.server.conn))
+                conn = get_db()
+                try:
+                    self._json_response(api_export(conn))
+                finally:
+                    conn.close()
                 return
 
         self.send_response(404)
@@ -331,7 +367,11 @@ class APIHandler(BaseHTTPRequestHandler):
                 self.send_response(400)
                 self.end_headers()
                 return
-            self._json_response(api_settings_set(self.server.conn, data))
+            conn = get_db()
+            try:
+                self._json_response(api_settings_set(conn, data))
+            finally:
+                conn.close()
             return
         if self.path == "/api/import":
             content_len = int(self.headers.get("Content-Length", 0))
@@ -342,7 +382,11 @@ class APIHandler(BaseHTTPRequestHandler):
                 self.send_response(400)
                 self.end_headers()
                 return
-            self._json_response(api_import(self.server.conn, data))
+            conn = get_db()
+            try:
+                self._json_response(api_import(conn, data))
+            finally:
+                conn.close()
             return
 
         self.send_response(404)
@@ -865,6 +909,13 @@ def api_import(conn: sqlite3.Connection, data: dict) -> dict:
 
 
 # ── Main ─────────────────────────────────────────────────────────────
+
+def get_db():
+    """Open a fresh DB connection per request (WAL allows concurrent reads)."""
+    conn = sqlite3.connect(DB_PATH, check_same_thread=False)
+    conn.execute("PRAGMA journal_mode=WAL")
+    conn.execute("PRAGMA busy_timeout=5000")
+    return conn
 
 def main():
     # Ensure DB directory exists

@@ -1,6 +1,7 @@
 services:
   collector:
     image: ghcr.io/zmail-tech/llama-monitor:latest
+    build: .
     container_name: llama-collector
     env_file: .env
     environment:
