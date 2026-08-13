@@ -203,6 +203,18 @@ async function loadFilterOptions() {
 
 // ── Render Functions ───────────────────────────────────────
 
+// Instance color map — stable color per instance label (shared with energy section)
+const INSTANCE_PALETTE = ['#cc241d', '#458588', '#b16286', '#d65d0e', '#8ec07c', '#fabd2f'];
+const instanceColorMap = {};
+let instanceColorIdx = 0;
+
+function getInstanceColor(instance) {
+  if (!(instance in instanceColorMap)) {
+    instanceColorMap[instance] = INSTANCE_PALETTE[instanceColorIdx++ % INSTANCE_PALETTE.length];
+  }
+  return instanceColorMap[instance];
+}
+
 async function renderCurrentState() {
   const data = await api("/api/current");
   if (!data) return;
@@ -218,9 +230,11 @@ async function renderCurrentState() {
       : inst.status === "loading" ? "status-loading"
       : "status-unloaded";
 
+    const color = getInstanceColor(inst.instance);
+
     card.innerHTML = `
       <div class="instance-info">
-        <span class="instance-name">${inst.instance}</span>
+        <span class="instance-name"><span class="instance-dot" style="background:${color}"></span>${inst.instance}</span>
         <span class="instance-model">${inst.model}</span>
       </div>
       <span class="instance-status ${statusClass}">${inst.status}</span>
@@ -440,17 +454,9 @@ async function renderEnergy() {
 
   const totalActive = items.map(i => i.active_time_sec).reduce((a, b) => a + b, 0) || 1;
 
-  // Instance color map — stable color per instance label
-  const instanceColors = {};
-  const instancePalette = ['#cc241d', '#458588', '#b16286', '#d65d0e', '#8ec07c', '#fabd2f'];
-  let instanceIdx = 0;
-
   items.forEach(item => {
-    if (!(item.instance in instanceColors)) {
-      instanceColors[item.instance] = instancePalette[instanceIdx++ % instancePalette.length];
-    }
+    const color = getInstanceColor(item.instance);
     const pct = (item.active_time_sec / totalActive) * 100;
-    const color = instanceColors[item.instance];
     const row = document.createElement("div");
     row.className = "energy-row";
     row.innerHTML = `
