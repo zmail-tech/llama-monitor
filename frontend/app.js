@@ -309,12 +309,11 @@ async function renderModelTable() {
   document.getElementById("instance-count").textContent = new Set(totals.map(t => t.instance)).size;
 }
 
+let distPieChart = null;
+
 async function renderDistributionBars() {
   const data = await api("/api/summary");
   if (!data || !data.totals.length) return;
-
-  const container = document.getElementById("dist-bars");
-  container.innerHTML = "";
 
   // Apply filters
   let totals = data.totals;
@@ -327,7 +326,7 @@ async function renderDistributionBars() {
     const key = t.model;
     if (!modelMap[key]) modelMap[key] = { prompt: 0, predicted: 0, instances: new Set() };
     modelMap[key].prompt += t.prompt_tokens || 0;
-    modelMap[key].predicted += t.predicted_tokens || 0;
+    modelMap[key].predicted += t.predicted || 0;
     modelMap[key].instances.add(t.instance);
   });
 
@@ -338,23 +337,51 @@ async function renderDistributionBars() {
     predicted: v.predicted,
   })).sort((a, b) => b.total - a.total);
 
-  const maxTotal = Math.max(...entries.map(e => e.total), 1);
+  const labels = entries.map(e => e.model);
+  const values = entries.map(e => e.total);
+  const colors = entries.map((_, i) => COLORS[i % COLORS.length]);
 
-  entries.forEach((e, i) => {
-    const pct = (e.total / maxTotal) * 100;
-    const color = COLORS[i % COLORS.length];
+  const canvas = document.getElementById("dist-pie");
+  if (!canvas) return;
 
-    const row = document.createElement("div");
-    row.className = "dist-row";
-    row.innerHTML = `
-      <span class="dist-label" title="${e.model}">${e.model}</span>
-      <div class="dist-bar-bg">
-        <div class="dist-bar-fill" style="width:${pct}%;background:${color}"></div>
-      </div>
-      <span class="dist-value">${fmt(e.total)}</span>
-    `;
-    container.appendChild(row);
-  });
+  if (!distPieChart) {
+    const ctx = canvas.getContext("2d");
+    distPieChart = new Chart(ctx, {
+      type: "doughnut",
+      data: { labels, datasets: [{ data: values, backgroundColor: colors, borderWidth: 2, borderColor: "#1d2021" }] },
+      options: {
+        responsive: true,
+        maintainAspectRatio: true,
+        aspectRatio: 2,
+        cutout: "40%",
+        plugins: {
+          legend: {
+            position: "right",
+            labels: {
+              color: "#bdae93",
+              font: { family: "'JetBrains Mono', monospace", size: 11 },
+              padding: 12,
+              usePointStyle: true,
+              pointStyleWidth: 10,
+            },
+          },
+          tooltip: {
+            callbacks: {
+              label: (ctx) => {
+                const pct = ((ctx.parsed / values.reduce((a, b) => a + b, 0)) * 100).toFixed(1);
+                return ` ${ctx.label}: ${fmt(ctx.parsed)} (${pct}%)`;
+              },
+            },
+          },
+        },
+      },
+    });
+  } else {
+    distPieChart.data.labels = labels;
+    distPieChart.data.datasets[0].data = values;
+    distPieChart.data.datasets[0].backgroundColor = colors;
+    distPieChart.update();
+  }
 }
 
 // ── Energy ─────────────────────────────────────────────────

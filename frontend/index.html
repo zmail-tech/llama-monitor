@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Llama.cpp Monitor</title>
 <link rel="stylesheet" href="/style.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
 </head>
 <body>
 <header>
@@ -184,10 +185,12 @@
     </div>
   </section>
 
-  <!-- Model Distribution Bar Chart -->
+  <!-- Model Distribution Pie Chart -->
   <section class="card">
     <h2 class="card-title">Token Distribution by Model</h2>
-    <div id="dist-bars" class="dist-bars"></div>
+    <div class="pie-chart-container">
+      <canvas id="dist-pie"></canvas>
+    </div>
   </section>
 </main>
 

@@ -749,6 +749,19 @@ main {
   gap: 10px;
 }
 
+.pie-chart-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 16px 0;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.pie-chart-container canvas {
+  max-width: 100%;
+}
+
 .dist-row {
   display: grid;
   grid-template-columns: 200px 1fr 90px;
