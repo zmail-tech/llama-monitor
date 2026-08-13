@@ -399,6 +399,7 @@ def api_summary(conn: sqlite3.Connection) -> dict:
                MAX(ts_epoch)
         FROM snapshots
         GROUP BY instance, model
+        HAVING MAX(prompt_tokens_total) > 0 OR MAX(predicted_tokens_total) > 0
         ORDER BY instance, model
     """)
     peak_rows = cur.fetchall()
@@ -585,6 +586,7 @@ def api_energy(conn: sqlite3.Connection, path: str) -> dict:
         FROM snapshots s
         WHERE {where}
         GROUP BY s.instance, s.model
+        HAVING MAX(s.prompt_tokens_total) > 0 OR MAX(s.predicted_tokens_total) > 0
         ORDER BY s.instance, s.model
     """, params)
     rows = cur.fetchall()
@@ -595,6 +597,7 @@ def api_energy(conn: sqlite3.Connection, path: str) -> dict:
         FROM snapshots s
         WHERE {where}
         GROUP BY s.instance, s.model
+        HAVING MAX(s.prompt_tokens_total) > 0 OR MAX(s.predicted_tokens_total) > 0
         ORDER BY s.instance, s.model
     """, params)
     first_rows = cur2.fetchall()
@@ -733,6 +736,7 @@ def api_cost_calc(conn: sqlite3.Connection, path: str) -> dict:
         FROM snapshots
         WHERE ts_epoch >= ?
         GROUP BY instance, model
+        HAVING MAX(prompt_tokens_total) > 0 OR MAX(predicted_tokens_total) > 0
     """, (since,))
     rows = cur.fetchall()
 

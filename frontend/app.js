@@ -707,6 +707,11 @@ async function refresh() {
     renderEnergy(),
   ]);
 
+  // Re-calculate cost comparison for the current time range
+  if (selectedCostModel) {
+    calculateCost(selectedCostModel);
+  }
+
   const elapsed = Math.round(performance.now() - start);
   document.getElementById("last-update").textContent =
     `updated ${fmtTimestamp(Date.now() / 1000)} (${elapsed}ms)`;

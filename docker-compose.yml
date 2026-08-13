@@ -11,8 +11,7 @@ services:
       - "7788:7788"
     volumes:
       - collector-data:/data
-      # Mount local frontend for dev overrides (optional):
-      # - ./frontend:/app/frontend:ro
+      - ./frontend:/app/frontend:ro
     restart: unless-stopped
     networks:
       - monitor
