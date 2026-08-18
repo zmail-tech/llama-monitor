@@ -35,6 +35,18 @@
   --purple-b:  #bf4dff;
   --aqua-b:    #00ffcc;
   --orange-b:  #ff6b35;
+
+  /* Chart series palette — neon */
+  --series-1:  #39ff14;
+  --series-2:  #00d4ff;
+  --series-3:  #ff6b9d;
+  --series-4:  #bf4dff;
+  --series-5:  #00ffcc;
+  --series-6:  #ffd700;
+  --series-7:  #ff6b35;
+  --series-8:  #8a2be2;
+
+  --shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
 }
 
 /* Neon glow on header */
@@ -61,7 +73,8 @@ header h1 .accent {
 }
 
 /* Neon stat values */
-.stat-value {
+.stat-value,
+.stat-value-sm {
   text-shadow: 0 0 12px currentColor;
 }
 
@@ -70,10 +83,23 @@ header h1 .accent {
   border: 1px solid var(--bg2);
 }
 
+.instance-metric {
+  background: rgba(0, 0, 0, 0.2);
+}
+
 /* Neon range buttons */
 .range-btn.active {
   background: var(--purple);
   box-shadow: 0 0 10px rgba(191, 77, 255, 0.5);
+}
+
+/* Neon status badge glow */
+.badge-live {
+  box-shadow: 0 0 10px rgba(57, 255, 20, 0.5);
+}
+
+.badge-offline {
+  box-shadow: 0 0 10px rgba(255, 107, 157, 0.5);
 }
 
 /* Neon cost comparison */
@@ -96,12 +122,18 @@ header h1 .accent {
   color: var(--orange-b);
 }
 
+/* Neon energy bar */
+.energy-bar-bg,
+.dist-bar-bg {
+  background: rgba(0, 0, 0, 0.3);
+}
+
 /* Neon scrollbar */
-.cost-dropdown::-webkit-scrollbar-thumb {
+::-webkit-scrollbar-thumb {
   background: var(--purple);
   border-radius: 4px;
 }
 
-.cost-dropdown::-webkit-scrollbar-track {
+::-webkit-scrollbar-track {
   background: var(--bg0-h);
 }

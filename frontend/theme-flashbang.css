@@ -35,6 +35,18 @@
   --purple-b:  #660099;
   --aqua-b:    #008080;
   --orange-b:  #cc5500;
+
+  /* Chart series palette — stark */
+  --series-1:  #008000;
+  --series-2:  #0000cc;
+  --series-3:  #cc0000;
+  --series-4:  #660099;
+  --series-5:  #008080;
+  --series-6:  #b8860b;
+  --series-7:  #cc5500;
+  --series-8:  #808080;
+
+  --shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 /* Stark, no shadows */
@@ -66,7 +78,8 @@ header h1 .accent {
   border-bottom-color: #e8e8e8;
 }
 
-.stat-value {
+.stat-value,
+.stat-value-sm {
   text-shadow: none;
 }
 
@@ -74,10 +87,16 @@ header h1 .accent {
 .stat-value.accent-blue { color: #0000cc; }
 .stat-value.accent-yellow { color: #b8860b; }
 .stat-value.accent-aqua { color: #008080; }
+.stat-value.accent-orange { color: #cc5500; }
+.stat-value.accent-purple { color: #660099; }
 
 .instance-card {
   background: #f5f5f5;
   border: 1px solid #d0d0d0;
+}
+
+.instance-metric {
+  background: #ffffff;
 }
 
 .range-btn.active {
@@ -107,7 +126,7 @@ header h1 .accent {
 }
 
 .cost-result-card {
-  background: #ffffff;
+  background: #f5f5f5;
   border-color: #000000;
 }
 

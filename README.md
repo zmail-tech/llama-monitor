@@ -5,17 +5,22 @@ Lightweight, self-hosted dashboard for monitoring llama.cpp instances — token 
 ## Features
 
 - **Real-time metrics** — scrapes llama.cpp `/metrics` every 15 seconds
+- **Instance health** — per-node up/down, scrape latency, last error, consecutive-failure tracking
 - **Router-mode safe** — discovers loaded models via `/v1/models` before scraping, avoiding load/unload churn
 - **Persistent history** — SQLite backend stores snapshots across restarts
-- **Energy tracking** — GPU wattage per instance, electricity rate, energy consumption calculation
+- **Live KPIs with deltas** — throughput, tokens, and energy compared against the previous period (▲/▼)
+- **Energy tracking** — GPU wattage per instance, electricity rate, energy consumption + cost calculation
 - **OpenRouter cost comparison** — Model search, pricing lookup, cost calculation
 - **Cost model persistence** — Selected model saved to SQLite settings
 - **Theme support** — Gruvbox, Synthwave, Flashbang, DOOM themes
 - **Data portability** — Export/Import JSON for migrating data between instances
-- **Time-range filtering** — 1h · 6h · 24h · 7d · 30d · All
+- **Time-range filtering** — 1h · 6h · 24h · 7d · 30d · All, with per-instance and per-model filters
 - **Per-model breakdown** — tokens in/out, throughput, decode counts, active status
+- **Dependency-free charts** — pure SVG rendering, no CDN (works fully offline)
+- **Single round-trip refresh** — `/api/overview` returns the full dashboard payload in one call
 - **Zero dependencies** — single container, no external databases or message queues
 - **GHCR deployment** — Pre-built Docker image available on GitHub Container Registry
+
 
 ## Architecture
 
@@ -132,18 +137,22 @@ services:
 
 | Endpoint | Description |
 |----------|-------------|
-| `GET /api/summary` | Aggregate token totals by instance+model |
-| `GET /api/current` | Current loaded model per instance |
+| `GET /api/overview?range=24h[&instance=X][&model=Y]` | Single round-trip dashboard payload: current state, KPIs with previous-period deltas, bucketed activity series, energy, and instance health |
+| `GET /api/summary?range=24h[&instance=X][&model=Y]` | Aggregate token totals by instance+model (range-aware) |
+| `GET /api/current` | Current loaded model + live throughput per instance |
 | `GET /api/models` | List of all known models |
 | `GET /api/instances` | List of all instance labels |
-| `GET /api/series?range=24h` | Time-series data |
-| `GET /api/energy?range=24h&watts={}&rate=0.12` | Energy consumption calculation |
+| `GET /api/health` | Instance up/down, scrape latency, last error, consecutive failures |
+| `GET /api/series?range=24h&metric=throughput[&instance=X][&model=Y]` | Bucketed time-series (reset-safe deltas) |
+| `GET /api/energy?range=24h[&watts={}&rate=0.12]` | Energy consumption calculation |
 | `GET /api/openrouter-models?q=claude` | Search OpenRouter models |
-| `GET /api/cost-calc?model=anthropic/claude-3.5-sonnet&range=24h` | Cost calculation for a model |
+| `GET /api/cost-calc?model=anthropic/claude-opus-5-fast&range=24h` | Cost calculation for a model |
 | `GET /api/settings` | Get dashboard settings (wattage, rate, cost model) |
 | `POST /api/settings` | Save dashboard settings |
 | `GET /api/export` | Export all data as JSON |
 | `POST /api/import` | Import data from JSON |
+| `GET /api/version` | Collector version + uptime |
+
 
 ## Project Structure
 

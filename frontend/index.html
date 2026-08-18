@@ -5,16 +5,14 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Llama.cpp Monitor</title>
 <link rel="stylesheet" href="/style.css">
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
 </head>
 <body>
 <header>
   <div class="header-left">
     <h1>llama.cpp <span class="accent">monitor</span></h1>
-    <div id="status-badge" class="badge badge-live">● collecting</div>
+    <div id="status-badge" class="badge badge-live" title="Collector status">● collecting</div>
   </div>
   <div class="header-right">
-    <!-- Filters -->
     <div class="filter-group">
       <select id="filter-instance" title="Filter by instance">
         <option value="">All Instances</option>
@@ -32,7 +30,6 @@
       <button class="range-btn" data-range="all">All</button>
     </div>
     <div id="last-update" class="meta-text">—</div>
-    <!-- Settings Button -->
     <button id="settings-btn" class="settings-btn" title="Settings">⚙</button>
   </div>
 </header>
@@ -45,7 +42,6 @@
       <button id="settings-close" class="modal-close" title="Close">✕</button>
     </div>
     <div class="modal-body">
-      <!-- Theme -->
       <div class="setting-group">
         <label class="setting-label">Theme</label>
         <select id="theme-select">
@@ -55,21 +51,16 @@
           <option value="doom">DOOM</option>
         </select>
       </div>
-      <!-- Electricity Rate -->
       <div class="setting-group">
         <label class="setting-label">Electricity Rate ($/kWh)</label>
-        <input type="number" id="setting-rate" min="0" step="0.01" value="0.12" placeholder="e.g. 0.12">
+        <input type="number" id="setting-rate" min="0" step="0.001" value="0.12" placeholder="e.g. 0.12">
         <p class="setting-hint">Your electricity cost per kilowatt-hour</p>
       </div>
-      <!-- Per-Instance Wattage -->
       <div class="setting-group">
         <label class="setting-label">GPU Wattage per Instance</label>
-        <div id="watts-inputs" class="watts-inputs">
-          <!-- Populated dynamically by JS -->
-        </div>
+        <div id="watts-inputs" class="watts-inputs"></div>
         <p class="setting-hint">Estimated power draw of each GPU in watts</p>
       </div>
-      <!-- Export / Import -->
       <div class="setting-group">
         <label class="setting-label">Data Portability</label>
         <div class="export-import-row">
@@ -88,25 +79,17 @@
 </div>
 
 <main>
-  <!-- Current State -->
-  <section class="card" id="current-state">
-    <h2 class="card-title">Current State</h2>
-    <div id="instance-grid" class="instance-grid">
-      <!-- Populated by JS -->
-    </div>
-  </section>
-
-  <!-- Totals Row -->
+  <!-- Live KPI row -->
   <section class="stats-row" id="totals-row">
     <div class="stat-card">
-      <div class="stat-label">Total Prompt Tokens</div>
+      <div class="stat-label">Prompt Tokens</div>
       <div class="stat-value accent-green" id="total-prompt">—</div>
-      <div class="stat-sub" id="total-prompt-sub">all time</div>
+      <div class="stat-sub"><span id="range-label">last 24h</span><span id="delta-prompt" class="delta"></span></div>
     </div>
     <div class="stat-card">
-      <div class="stat-label">Total Generated Tokens</div>
+      <div class="stat-label">Generated Tokens</div>
       <div class="stat-value accent-blue" id="total-predicted">—</div>
-      <div class="stat-sub" id="total-predicted-sub">all time</div>
+      <div class="stat-sub"><span id="range-label-2">last 24h</span><span id="delta-predicted" class="delta"></span></div>
     </div>
     <div class="stat-card">
       <div class="stat-label">Total Tokens</div>
@@ -114,88 +97,103 @@
       <div class="stat-sub">prompt + generated</div>
     </div>
     <div class="stat-card">
-      <div class="stat-label">Avg Throughput</div>
-      <div class="stat-value accent-aqua" id="avg-throughput">—</div>
-      <div class="stat-sub">tokens/sec (generated)</div>
+      <div class="stat-label">Live Throughput</div>
+      <div class="stat-value accent-aqua" id="live-throughput">—</div>
+      <div class="stat-sub" id="live-throughput-sub">tokens/sec (generated)</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Est. Energy Cost</div>
+      <div class="stat-value accent-orange" id="energy-cost">—</div>
+      <div class="stat-sub" id="energy-cost-sub">$0.00/kWh</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Active Processing</div>
+      <div class="stat-value accent-purple" id="active-requests">0</div>
+      <div class="stat-sub" id="deferred-sub">0 deferred</div>
     </div>
   </section>
 
-  <!-- Energy Stats -->
-  <section class="card" id="energy-section">
-    <h2 class="card-title">Energy Usage</h2>
-    <div class="energy-summary" id="energy-summary">
-      <div class="stat-card">
-        <div class="stat-label">Active Time</div>
-        <div class="stat-value accent-orange" id="energy-active">—</div>
-        <div class="stat-sub">prompt + generation</div>
+  <!-- Instance Live Status -->
+  <section class="card" id="current-state">
+    <h2 class="card-title">Instances</h2>
+    <div id="instance-grid" class="instance-grid"></div>
+  </section>
+
+  <!-- Activity chart -->
+  <section class="card">
+    <h2 class="card-title">
+      Activity
+      <span class="card-title-sub" id="activity-sub">tokens per bucket · stacked prompt / generated</span>
+    </h2>
+    <div id="activity-chart" class="activity-chart"></div>
+    <div id="activity-legend" class="activity-legend"></div>
+  </section>
+
+  <!-- Energy + Distribution row -->
+  <section class="two-col">
+    <div class="card" id="energy-section">
+      <h2 class="card-title">Energy Usage</h2>
+      <div class="energy-summary">
+        <div class="energy-stat">
+          <div class="stat-label">Active Time</div>
+          <div class="stat-value-sm accent-orange" id="energy-active">—</div>
+        </div>
+        <div class="energy-stat">
+          <div class="stat-label">Energy</div>
+          <div class="stat-value-sm accent-red" id="energy-kwh">—</div>
+        </div>
       </div>
-      <div class="stat-card">
-        <div class="stat-label">Energy Consumed</div>
-        <div class="stat-value accent-red" id="energy-kwh">—</div>
-        <div class="stat-sub">kWh</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">Est. Cost</div>
-        <div class="stat-value accent-yellow" id="energy-cost">—</div>
-        <div class="stat-sub" id="energy-cost-sub">$0.00/kWh</div>
-      </div>
+      <div class="energy-breakdown" id="energy-breakdown"></div>
     </div>
-    <div class="energy-breakdown" id="energy-breakdown">
-      <!-- Populated by JS -->
+    <div class="card" id="dist-section">
+      <h2 class="card-title">Token Distribution</h2>
+      <div id="dist-chart" class="dist-chart"></div>
     </div>
   </section>
 
   <!-- Cost Comparison -->
   <section class="card" id="cost-comparison">
-    <h2 class="card-title">Cost Comparison</h2>
+    <h2 class="card-title">Cost Comparison <span class="card-title-sub">vs OpenRouter pricing</span></h2>
     <div class="cost-comparison-controls">
       <div class="cost-input-row">
         <input type="text" id="cost-search" class="cost-search-input" placeholder="Search OpenRouter models…" autocomplete="off">
         <div id="cost-dropdown" class="cost-dropdown"></div>
       </div>
       <div class="cost-result" id="cost-result">
-        <div class="cost-placeholder">Select a model to see estimated cost</div>
+        <div class="cost-placeholder">Select a model to see estimated cost for this time range</div>
       </div>
     </div>
   </section>
 
   <!-- Per-Model Breakdown -->
   <section class="card">
-    <h2 class="card-title">Usage by Model</h2>
+    <h2 class="card-title">Usage by Model <span class="card-title-sub">click a column to sort</span></h2>
     <div class="model-table-wrap">
       <table class="model-table" id="model-table">
         <thead>
           <tr>
-            <th>Instance</th>
-            <th>Model</th>
-            <th class="num">Prompt Tokens</th>
-            <th class="num">Generated Tokens</th>
-            <th class="num">Total</th>
-            <th class="num">Avg Prompt t/s</th>
-            <th class="num">Avg Gen t/s</th>
-            <th class="num">Prompt Time</th>
-            <th class="num">Gen Time</th>
-            <th class="num">Decodes</th>
-            <th>Status</th>
+            <th data-sort="instance">Instance</th>
+            <th data-sort="model">Model</th>
+            <th class="num" data-sort="prompt">Prompt Tokens</th>
+            <th class="num" data-sort="predicted">Generated Tokens</th>
+            <th class="num" data-sort="total">Total</th>
+            <th class="num" data-sort="predicted_tps">Live Gen t/s</th>
+            <th class="num" data-sort="prompt_tps">Live Prompt t/s</th>
+            <th class="num" data-sort="prompt_time">Prompt Time</th>
+            <th class="num" data-sort="predict_time">Gen Time</th>
+            <th class="num" data-sort="decodes">Decodes</th>
+            <th data-sort="active">Status</th>
           </tr>
         </thead>
-        <tbody id="model-tbody">
-        </tbody>
+        <tbody id="model-tbody"></tbody>
       </table>
-    </div>
-  </section>
-
-  <!-- Model Distribution Pie Chart -->
-  <section class="card">
-    <h2 class="card-title">Token Distribution by Model</h2>
-    <div class="pie-chart-container">
-      <canvas id="dist-pie"></canvas>
     </div>
   </section>
 </main>
 
 <footer>
-  <span>Data from <span id="instance-count">0</span> instances · SQLite backend · refreshes every ~15s</span>
+  <span id="footer-left">Data from <span id="instance-count">0</span> instances · SQLite backend</span>
+  <span id="footer-right">v2 · refreshes every ~15s</span>
 </footer>
 
 <script src="/app.js"></script>

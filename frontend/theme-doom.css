@@ -36,6 +36,18 @@
   --purple-b:  #9b4db8;
   --aqua-b:    #5cb89b;
   --orange-b:  #e87030;
+
+  /* Chart series palette — DOOM */
+  --series-1:  #5cb85c;
+  --series-2:  #5c8bd4;
+  --series-3:  #b91e1e;
+  --series-4:  #9b4db8;
+  --series-5:  #5cb89b;
+  --series-6:  #e8c840;
+  --series-7:  #e87030;
+  --series-8:  #808080;
+
+  --shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
 }
 
 /* DOOM-style header with red border */
@@ -69,7 +81,8 @@ header h1 .accent {
 }
 
 /* DOOM-style stat values */
-.stat-value {
+.stat-value,
+.stat-value-sm {
   font-weight: 900;
 }
 
@@ -77,12 +90,18 @@ header h1 .accent {
 .stat-value.accent-blue { color: #5c8bd4; }
 .stat-value.accent-yellow { color: #e8c840; }
 .stat-value.accent-aqua { color: #5cb89b; }
+.stat-value.accent-orange { color: #e87030; }
+.stat-value.accent-purple { color: #9b4db8; }
 
 /* DOOM instance cards */
 .instance-card {
   background: #3d3d3d;
   border: 1px solid #555555;
   border-radius: 2px;
+}
+
+.instance-metric {
+  background: #2b2b2b;
 }
 
 /* DOOM HUD range buttons */
@@ -99,6 +118,22 @@ header h1 .accent {
 
 .range-btn:hover {
   background: #555555;
+}
+
+/* DOOM badges */
+.badge-live {
+  background: #3d8b37;
+  color: #ffffff;
+}
+
+.badge-offline {
+  background: #b91e1e;
+  color: #ffffff;
+}
+
+.badge-degraded {
+  background: #c8a415;
+  color: #000000;
 }
 
 /* DOOM-style cost comparison */
@@ -123,7 +158,7 @@ header h1 .accent {
 }
 
 .cost-result-card {
-  background: #2b2b2b;
+  background: #3d3d3d;
   border-color: #555555;
   border-radius: 2px;
 }
@@ -143,17 +178,6 @@ header h1 .accent {
   color: #5cb89b;
 }
 
-/* DOOM badges */
-.badge-live {
-  background: #3d8b37;
-  color: #ffffff;
-}
-
-.badge-offline {
-  background: #b91e1e;
-  color: #ffffff;
-}
-
 /* DOOM footer */
 footer {
   color: #707070;
@@ -161,11 +185,11 @@ footer {
 }
 
 /* DOOM scrollbar */
-.cost-dropdown::-webkit-scrollbar-thumb {
+::-webkit-scrollbar-thumb {
   background: #b91e1e;
   border-radius: 2px;
 }
 
-.cost-dropdown::-webkit-scrollbar-track {
+::-webkit-scrollbar-track {
   background: #2b2b2b;
 }
